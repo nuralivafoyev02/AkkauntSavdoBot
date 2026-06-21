@@ -835,7 +835,8 @@ async function uploadMediaFile(item, index, total) {
 
 async function submitSale(event) {
   event.preventDefault();
-  const form = event.currentTarget;
+  const form = event.target?.closest?.('#sellForm');
+  if (!(form instanceof HTMLFormElement)) return;
   let formData = new FormData(form);
   const platformSlug = String(formData.get('platformSlug') || '');
   const accountIdRaw = String(formData.get('accountIdRaw') || '').trim();
