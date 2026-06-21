@@ -115,7 +115,7 @@ async function createAccount(req, res) {
 
     accountGameId = parsed.accountId;
     accountServerId = parsed.serverId;
-    title = title || parsed.raw;
+    title = title || accountNickname || parsed.raw;
   }
 
   if (!title) {

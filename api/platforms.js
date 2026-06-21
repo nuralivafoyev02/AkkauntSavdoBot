@@ -1,6 +1,15 @@
 import { allowMethods, getSupabase, publicAccount, sendError, sendJson } from './_shared.js';
 import { mockAccounts, mockPlatforms } from './_mock.js';
 
+const PLATFORM_IMAGES = {
+  'free-fire': 'https://upload.wikimedia.org/wikipedia/en/thumb/3/38/Free_Fire_New_Logo.svg/250px-Free_Fire_New_Logo.svg.png',
+  'mobile-legends': 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a0/Mobile_Legends_Bang_Bang_2025_logo.png/250px-Mobile_Legends_Bang_Bang_2025_logo.png',
+  'pubg-mobile': 'https://www.pubgmobile.com/common/images/icon_logo.jpg',
+  steam: 'https://cdn.simpleicons.org/steam/ffffff',
+  telegram: 'https://cdn.simpleicons.org/telegram/ffffff',
+  instagram: 'https://cdn.simpleicons.org/instagram/ffffff'
+};
+
 function attachCounts(platforms, accounts) {
   const counts = accounts.reduce((acc, account) => {
     if (account.status === 'available') {
@@ -12,6 +21,7 @@ function attachCounts(platforms, accounts) {
   return platforms
     .map((platform) => ({
       ...platform,
+      image_url: platform.image_url || PLATFORM_IMAGES[platform.slug] || '',
       count: counts[platform.slug] || 0
     }))
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));

@@ -14,7 +14,7 @@ const state = {
   selectedPlatform: null,
   selectedAccount: null,
   saleDraft: {
-    platformSlug: '',
+    platformSlug: 'mobile-legends',
     lookup: null
   },
   pendingFiles: [],
@@ -204,7 +204,11 @@ function renderPlatformVisual(platform) {
   const label = initials(platform.title);
   return `
     <div class="platform-visual" style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
-      <span>${escapeHtml(label)}</span>
+      ${
+        platform.image_url
+          ? `<img src="${escapeHtml(platform.image_url)}" alt="${escapeHtml(platform.title)}" loading="lazy" />`
+          : `<span>${escapeHtml(label)}</span>`
+      }
       <i></i>
       <b></b>
     </div>
@@ -398,19 +402,6 @@ function renderSell() {
       <input type="hidden" name="accountNickname" value="" />
       <input type="hidden" name="accountRegion" value="" />
 
-      <section class="sale-platforms" aria-label="Platforma tanlash">
-        ${state.platforms
-          .map(
-            (platform) => `
-              <button class="${platform.slug === selectedSlug ? 'selected' : ''}" type="button" data-action="select-sale-platform" data-slug="${escapeHtml(platform.slug)}">
-                <span style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">${escapeHtml(initials(platform.title))}</span>
-                <strong>${escapeHtml(platform.title)}</strong>
-              </button>
-            `
-          )
-          .join('')}
-      </section>
-
       <label>
         <span>Akkaunt ID</span>
         <div class="lookup-row">
@@ -419,9 +410,13 @@ function renderSell() {
         </div>
       </label>
 
+      <div class="lookup-status" id="lookupStatus">
+        ${selectedSlug ? "Akkaunt ID ni tekshiring." : 'Avval platformani tanlang.'}
+      </div>
+
       <label>
-        <span>Akkaunt nomi</span>
-        <input name="title" type="text" maxlength="140" autocomplete="off" placeholder="Avtomatik to'ldiriladi yoki o'zingiz yozing" />
+        <span>Akkaunt nicki</span>
+        <input name="title" type="text" maxlength="140" autocomplete="off" placeholder="Tekshirishdan keyin avtomatik tushadi" />
       </label>
 
       <label>
@@ -434,10 +429,6 @@ function renderSell() {
         <input name="price" type="text" inputmode="numeric" required placeholder="5 000 000" />
       </label>
 
-      <div class="lookup-status" id="lookupStatus">
-        ${selectedSlug ? "Akkaunt ID ni tekshiring yoki ma'lumotlarni qo'lda kiriting." : 'Avval platformani tanlang.'}
-      </div>
-
       <div class="upload-zone">
         <input id="mediaInput" type="file" accept="image/*,video/*" multiple />
         <label for="mediaInput">
@@ -449,6 +440,25 @@ function renderSell() {
       <div class="media-preview">
         ${renderPendingFiles()}
       </div>
+
+      <section class="sale-platforms" aria-label="Platforma tanlash">
+        ${state.platforms
+          .map(
+            (platform) => `
+              <button class="${platform.slug === selectedSlug ? 'selected' : ''}" type="button" data-action="select-sale-platform" data-slug="${escapeHtml(platform.slug)}">
+                <span style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
+                  ${
+                    platform.image_url
+                      ? `<img src="${escapeHtml(platform.image_url)}" alt="" loading="lazy" />`
+                      : escapeHtml(initials(platform.title))
+                  }
+                </span>
+                <strong>${escapeHtml(platform.title)}</strong>
+              </button>
+            `
+          )
+          .join('')}
+      </section>
 
       <p class="form-status" id="formStatus"></p>
 
@@ -475,6 +485,17 @@ function renderPendingFiles() {
       `
     )
     .join('');
+}
+
+function refreshMediaPreview() {
+  const preview = document.querySelector('.media-preview');
+  if (preview) preview.innerHTML = renderPendingFiles();
+
+  const uploadCount = document.querySelector('.upload-zone label span');
+  if (uploadCount) uploadCount.textContent = `${state.pendingFiles.length} ta fayl tanlangan`;
+
+  const input = document.querySelector('#mediaInput');
+  if (input) input.value = '';
 }
 
 function renderSkeletonGrid(type) {
@@ -611,7 +632,7 @@ async function refreshCurrent() {
 }
 
 function switchTab(tab) {
-  const platformSlug = tab === 'sell' ? state.selectedPlatform?.slug || state.saleDraft.platformSlug : '';
+  const platformSlug = tab === 'sell' ? state.selectedPlatform?.slug || state.saleDraft.platformSlug || 'mobile-legends' : 'mobile-legends';
   withRenderTransition(() => {
     state.tab = tab;
     state.route = tab === 'sell' ? 'sell' : 'platforms';
@@ -666,8 +687,9 @@ function applyLookupToForm(result) {
   form.elements.accountNickname.value = result.nickname || '';
   form.elements.accountRegion.value = result.region || '';
 
-  if (!form.elements.title.value.trim()) {
-    form.elements.title.value = result.raw || result.nickname || result.accountId || '';
+  const currentTitle = form.elements.title.value.trim();
+  if (!currentTitle || currentTitle === result.raw || currentTitle === result.accountId) {
+    form.elements.title.value = result.nickname || result.raw || result.accountId || '';
   }
 
   state.saleDraft.lookup = result;
@@ -746,7 +768,7 @@ function addPendingFiles(files) {
   }
 
   state.pendingFiles = [...state.pendingFiles, ...accepted].slice(0, 10);
-  render();
+  refreshMediaPreview();
 }
 
 function removePendingFile(id) {
@@ -757,7 +779,7 @@ function removePendingFile(id) {
   }
 
   state.pendingFiles = state.pendingFiles.filter((file) => file.id !== id);
-  render();
+  refreshMediaPreview();
 }
 
 function parsePrice(value) {
@@ -968,6 +990,21 @@ app.addEventListener('submit', (event) => {
 
 window.addEventListener('beforeunload', () => {
   objectUrls.forEach((url) => URL.revokeObjectURL(url));
+});
+
+window.addEventListener('focusin', (event) => {
+  if (event.target.matches('input, textarea, select')) {
+    document.body.classList.add('keyboard-open');
+  }
+});
+
+window.addEventListener('focusout', () => {
+  window.clearTimeout(window.__keyboardCloseTimer);
+  window.__keyboardCloseTimer = window.setTimeout(() => {
+    if (!document.activeElement?.matches?.('input, textarea, select')) {
+      document.body.classList.remove('keyboard-open');
+    }
+  }, 120);
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTelegramChrome);
