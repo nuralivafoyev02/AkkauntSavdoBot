@@ -1,5 +1,6 @@
 import {
   getBaseUrl,
+  getSupabase,
   normalizeUsername,
   readJson,
   requireSupabase,
@@ -9,9 +10,15 @@ import {
 
 const DEFAULT_ADMIN_USERNAME = 'Geto_senpai';
 const DEFAULT_BOT_USERNAME = 'GetosenpaiShopBot';
+const BROADCAST_PAGE_SIZE = 100;
+const BROADCAST_SEND_DELAY_MS = 45;
 
 function isMissingColumnError(error) {
   return error?.code === '42703' || /column .* does not exist/i.test(error?.message || '');
+}
+
+function isMissingRelationError(error) {
+  return error?.code === '42P01' || /relation .* does not exist/i.test(error?.message || '');
 }
 
 function telegramApiUrl(method) {
@@ -41,6 +48,10 @@ async function telegram(method, payload) {
   return data.result;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isWebhookAllowed(req) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!secret) return true;
@@ -65,16 +76,16 @@ function greetingPayload(chatId, req) {
   return {
     chat_id: chatId,
     text: [
-      'Assalomu alaykum!',
+      'Assalomu alaykum 👋',
       '',
-      "Geto Senpai Shop mini do'koniga xush kelibsiz.",
-      "Quyidagi tugma orqali akkauntlarni ko'rishingiz va o'zingiznikini sotuvga qo'yishingiz mumkin."
+      "Geto Senpai Shop mini do'koniga xush kelibsiz 😇",
+      "Quyidagi tugma orqali akkauntlarni ko'rishingiz va o'zingiznikini sotuvga qo'yishingiz mumkin 💸"
     ].join('\n'),
     reply_markup: {
       inline_keyboard: [
         [
           {
-            text: "Do'konga marhamat",
+            text: "Do'konga marhamat 🛍",
             web_app: {
               url: getMiniAppUrl(req)
             }
@@ -83,6 +94,100 @@ function greetingPayload(chatId, req) {
       ]
     }
   };
+}
+
+async function saveBotUser(message) {
+  if (message?.chat?.type !== 'private' || !message.from?.id) return;
+
+  const supabase = getSupabase();
+  if (!supabase) return;
+
+  const user = message.from;
+  const payload = {
+    tg_user_id: user.id,
+    chat_id: message.chat.id,
+    username: user.username || null,
+    first_name: user.first_name || null,
+    last_name: user.last_name || null,
+    language_code: user.language_code || null,
+    is_bot: Boolean(user.is_bot),
+    is_active: true,
+    last_seen_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from('bot_users')
+    .upsert(payload, {
+      onConflict: 'tg_user_id'
+    });
+
+  if (error && !isMissingRelationError(error)) throw error;
+}
+
+function parseBroadcastCommand(text, message) {
+  const match = String(text || '').match(/^\/message(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (!match) return null;
+
+  return (
+    match[1] ||
+    message.reply_to_message?.text ||
+    message.reply_to_message?.caption ||
+    ''
+  ).trim();
+}
+
+async function markBotUserInactive(tgUserId) {
+  const supabase = requireSupabase();
+  await supabase
+    .from('bot_users')
+    .update({
+      is_active: false,
+      last_error: 'blocked_or_unreachable',
+      last_error_at: new Date().toISOString()
+    })
+    .eq('tg_user_id', tgUserId);
+}
+
+async function broadcastToUsers(text) {
+  const supabase = requireSupabase();
+  let sent = 0;
+  let failed = 0;
+  let offset = 0;
+
+  while (true) {
+    const { data: users, error } = await supabase
+      .from('bot_users')
+      .select('tg_user_id,chat_id')
+      .eq('is_active', true)
+      .order('last_seen_at', { ascending: false })
+      .range(offset, offset + BROADCAST_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    if (!users?.length) break;
+
+    for (const user of users) {
+      try {
+        await telegram('sendMessage', {
+          chat_id: user.chat_id,
+          text,
+          disable_web_page_preview: true
+        });
+        sent += 1;
+      } catch (error) {
+        failed += 1;
+        if ([400, 403].includes(error.statusCode)) {
+          await markBotUserInactive(user.tg_user_id);
+        }
+      }
+
+      await sleep(BROADCAST_SEND_DELAY_MS);
+    }
+
+    if (users.length < BROADCAST_PAGE_SIZE) break;
+    offset += BROADCAST_PAGE_SIZE;
+  }
+
+  return { sent, failed };
 }
 
 async function markSoldByTitle(title) {
@@ -148,6 +253,46 @@ async function handleMessage(message, req) {
   const chatType = message.chat.type;
   const text = String(message.text || '').trim();
   const soldMatch = text.match(/^(.{2,160})\s+sotildi$/i);
+  const broadcastText = parseBroadcastCommand(text, message);
+
+  if (chatType === 'private') {
+    await saveBotUser(message);
+  }
+
+  if (broadcastText !== null && isAdmin(message.from)) {
+    if (!broadcastText) {
+      await telegram('sendMessage', {
+        chat_id: chatId,
+        text: "Xabar matnini ham yozing: /message Assalomu alaykum"
+      });
+      return;
+    }
+
+    await telegram('sendMessage', {
+      chat_id: chatId,
+      text: 'Yuborish boshlandi...'
+    });
+
+    let result;
+    try {
+      result = await broadcastToUsers(broadcastText);
+    } catch (error) {
+      if (isMissingRelationError(error)) {
+        await telegram('sendMessage', {
+          chat_id: chatId,
+          text: 'Broadcast jadvali topilmadi. Avval supabase/003_bot_users_broadcast.sql migratsiyasini ishga tushiring.'
+        });
+        return;
+      }
+      throw error;
+    }
+
+    await telegram('sendMessage', {
+      chat_id: chatId,
+      text: `Broadcast tugadi. Yuborildi: ${result.sent}. Xato: ${result.failed}.`
+    });
+    return;
+  }
 
   if (soldMatch && isAdmin(message.from)) {
     const title = soldMatch[1].trim();

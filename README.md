@@ -21,8 +21,9 @@ Vite dev server local holatda `api/*` Vercel funksiyalarini ham emulyatsiya qila
 
 1. Yangi loyiha bo'lsa Supabase SQL Editor ichida `supabase/001_schema.sql` faylini ishga tushiring.
 2. Oldin schema qo'yilgan bo'lsa, `supabase/002_account_lookup_metadata.sql` faylini ham ishga tushiring.
-3. Storage bucket nomi default: `account-media`.
-4. Vercel env qiymatlariga `SUPABASE_URL` va `SUPABASE_SERVICE_ROLE_KEY` qo'ying.
+3. Broadcast uchun `supabase/003_bot_users_broadcast.sql` faylini ishga tushiring.
+4. Storage bucket nomi default: `account-media`.
+5. Vercel env qiymatlariga `SUPABASE_URL` va `SUPABASE_SERVICE_ROLE_KEY` qo'ying.
 
 ## Vercel env
 
@@ -59,6 +60,14 @@ Botga yozilganda u faqat Mini App tugmasini beradi. Admin botga:
 ```
 
 deb yozsa, shu title bilan turgan aktiv akkaunt `sold` holatiga o'tadi va do'kondan yo'qoladi.
+
+Admin barcha saqlangan bot foydalanuvchilariga xabar yuborishi uchun:
+
+```text
+/message Assalomu alaykum, yangi akkauntlar qo'shildi.
+```
+
+Yoki `/message` buyrug'ini yuboriladigan xabarga reply qilib yozish mumkin.
 
 ## Build
 

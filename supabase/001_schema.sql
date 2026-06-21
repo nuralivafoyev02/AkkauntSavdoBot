@@ -31,6 +31,21 @@ create table if not exists public.accounts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.bot_users (
+  tg_user_id bigint primary key,
+  chat_id bigint not null unique,
+  username text,
+  first_name text,
+  last_name text,
+  language_code text,
+  is_bot boolean not null default false,
+  is_active boolean not null default true,
+  first_seen_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  last_error text,
+  last_error_at timestamptz
+);
+
 create index if not exists accounts_platform_status_created_idx
   on public.accounts (platform_slug, status, created_at desc);
 
@@ -40,6 +55,9 @@ create index if not exists accounts_status_created_idx
 create index if not exists accounts_game_id_idx
   on public.accounts (account_game_id)
   where account_game_id is not null;
+
+create index if not exists bot_users_active_last_seen_idx
+  on public.bot_users (is_active, last_seen_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -59,10 +77,12 @@ execute function public.set_updated_at();
 
 alter table public.platforms enable row level security;
 alter table public.accounts enable row level security;
+alter table public.bot_users enable row level security;
 
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.platforms to service_role;
 grant select, insert, update, delete on public.accounts to service_role;
+grant select, insert, update, delete on public.bot_users to service_role;
 grant execute on function public.set_updated_at() to service_role;
 
 insert into public.platforms (slug, title, subtitle, accent_color, sort_order) values
