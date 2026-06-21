@@ -39,12 +39,12 @@ function escapeHtml(value) {
 }
 
 function formatPrice(value) {
-  return `${new Intl.NumberFormat('uz-UZ').format(Number(value || 0))} so'm`;
+  return `${formatNumberInput(value)} so'm`;
 }
 
 function formatNumberInput(value) {
   const digits = String(value || '').replace(/[^\d]/g, '');
-  return digits ? new Intl.NumberFormat('uz-UZ').format(Number(digits)) : '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 function initials(title) {
@@ -225,14 +225,6 @@ function renderPlatforms() {
   if (state.error) return renderError();
 
   return `
-    <section class="intro-strip">
-      <div>
-        <span class="status-dot"></span>
-        <strong>Live market</strong>
-      </div>
-      <p>${state.platforms.reduce((total, item) => total + Number(item.count || 0), 0)} ta aktiv akkaunt</p>
-    </section>
-
     <section class="platform-grid">
       ${state.platforms
         .map(

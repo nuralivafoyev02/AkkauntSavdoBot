@@ -136,44 +136,6 @@ button {
   margin: 0 auto;
 }
 
-.intro-strip {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: center;
-  min-height: 68px;
-  margin: 4px 0 16px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.intro-strip div {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-}
-
-.intro-strip strong {
-  font-size: 18px;
-}
-
-.intro-strip p {
-  margin: 0;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--success), transparent 78%);
-}
-
 .platform-grid,
 .account-grid {
   display: grid;
