@@ -13,9 +13,12 @@ const state = {
   accounts: [],
   selectedPlatform: null,
   selectedAccount: null,
+  saleDraft: {
+    platformSlug: '',
+    lookup: null
+  },
   pendingFiles: [],
   lightbox: null,
-  toast: '',
   config: {
     adminUsername: 'Geto_senpai',
     botUsername: 'GetosenpaiShopBot',
@@ -52,6 +55,11 @@ function initials(title) {
 function sizeLabel(bytes) {
   if (!bytes) return '0 MB';
   return `${(bytes / 1024 / 1024).toFixed(bytes > 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function uid() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function setTelegramChrome() {
@@ -150,12 +158,18 @@ async function loadAccounts(platformSlug) {
 }
 
 function showToast(message) {
-  state.toast = message;
-  render();
+  let toast = document.querySelector('.toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = 'toast';
+    document.body.append(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add('show');
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => {
-    state.toast = '';
-    render();
+    toast.remove();
   }, 2800);
 }
 
@@ -261,6 +275,16 @@ function renderAccountCover(account) {
   `;
 }
 
+function accountMetaLine(account) {
+  const bits = [];
+  if (account.account_nickname) bits.push(account.account_nickname);
+  if (account.account_region) bits.push(account.account_region);
+  if (account.account_game_id) {
+    bits.push(`${account.account_game_id}${account.account_server_id ? ` (${account.account_server_id})` : ''}`);
+  }
+  return bits.join(' · ');
+}
+
 function renderAccounts() {
   if (state.loading) return renderSkeletonGrid('account');
   if (state.error) return renderError();
@@ -288,6 +312,7 @@ function renderAccounts() {
                   <button class="account-card" type="button" data-action="open-account" data-id="${escapeHtml(account.id)}" style="--delay:${index * 35}ms">
                     ${renderAccountCover(account)}
                     <span>${escapeHtml(account.title)}</span>
+                    ${accountMetaLine(account) ? `<small>${escapeHtml(accountMetaLine(account))}</small>` : ''}
                     <strong>${formatPrice(account.price_uzs)}</strong>
                   </button>
                 `
@@ -344,6 +369,15 @@ function renderDetail() {
           <h2>${escapeHtml(account.title)}</h2>
         </div>
         <strong class="detail-price">${formatPrice(account.price_uzs)}</strong>
+        ${
+          accountMetaLine(account)
+            ? `<div class="detail-meta">
+                ${account.account_nickname ? `<span>Nik: ${escapeHtml(account.account_nickname)}</span>` : ''}
+                ${account.account_region ? `<span>Region: ${escapeHtml(account.account_region)}</span>` : ''}
+                ${account.account_game_id ? `<span>ID: ${escapeHtml(account.account_game_id)}${account.account_server_id ? ` (${escapeHtml(account.account_server_id)})` : ''}</span>` : ''}
+              </div>`
+            : ''
+        }
         <p>${escapeHtml(account.description).replace(/\n/g, '<br />')}</p>
       </section>
 
@@ -353,19 +387,45 @@ function renderDetail() {
 }
 
 function renderSell() {
-  const options = state.platforms
-    .map((platform) => `<option value="${escapeHtml(platform.slug)}">${escapeHtml(platform.title)}</option>`)
-    .join('');
+  const selectedSlug = state.saleDraft.platformSlug;
+  const selectedPlatform = state.platforms.find((platform) => platform.slug === selectedSlug);
 
   return `
     <form class="sell-form" id="sellForm">
+      <input type="hidden" name="platformSlug" value="${escapeHtml(selectedSlug)}" />
+      <input type="hidden" name="accountGameId" value="" />
+      <input type="hidden" name="accountServerId" value="" />
+      <input type="hidden" name="accountNickname" value="" />
+      <input type="hidden" name="accountRegion" value="" />
+
+      <section class="sale-platforms" aria-label="Platforma tanlash">
+        ${state.platforms
+          .map(
+            (platform) => `
+              <button class="${platform.slug === selectedSlug ? 'selected' : ''}" type="button" data-action="select-sale-platform" data-slug="${escapeHtml(platform.slug)}">
+                <span style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">${escapeHtml(initials(platform.title))}</span>
+                <strong>${escapeHtml(platform.title)}</strong>
+              </button>
+            `
+          )
+          .join('')}
+      </section>
+
       <label>
-        <span>Akkaunt nomi</span>
-        <input name="title" type="text" maxlength="140" autocomplete="off" required placeholder="516874602 (6253)" />
+        <span>Akkaunt ID</span>
+        <div class="lookup-row">
+          <input name="accountIdRaw" type="text" maxlength="80" autocomplete="off" placeholder="${selectedPlatform?.slug === 'mobile-legends' ? '516874602 (6253)' : 'Akkaunt ID yoki username'}" />
+          <button type="button" data-action="lookup-account">Tekshirish</button>
+        </div>
       </label>
 
       <label>
-        <span>To'liq description</span>
+        <span>Akkaunt nomi</span>
+        <input name="title" type="text" maxlength="140" autocomplete="off" placeholder="Avtomatik to'ldiriladi yoki o'zingiz yozing" />
+      </label>
+
+      <label>
+        <span>To'liq ma'lumot</span>
         <textarea name="description" rows="5" maxlength="3000" required placeholder="Skinlar, rank, login holati, kafolat..."></textarea>
       </label>
 
@@ -374,13 +434,9 @@ function renderSell() {
         <input name="price" type="text" inputmode="numeric" required placeholder="5 000 000" />
       </label>
 
-      <label>
-        <span>Platforma</span>
-        <select name="platformSlug" required>
-          <option value="">Tanlang</option>
-          ${options}
-        </select>
-      </label>
+      <div class="lookup-status" id="lookupStatus">
+        ${selectedSlug ? "Akkaunt ID ni tekshiring yoki ma'lumotlarni qo'lda kiriting." : 'Avval platformani tanlang.'}
+      </div>
 
       <div class="upload-zone">
         <input id="mediaInput" type="file" accept="image/*,video/*" multiple />
@@ -488,7 +544,6 @@ function render() {
         ${currentContent()}
       </section>
       ${renderBottomNav()}
-      ${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}
     </main>
     ${renderLightbox()}
   `;
@@ -556,14 +611,111 @@ async function refreshCurrent() {
 }
 
 function switchTab(tab) {
+  const platformSlug = tab === 'sell' ? state.selectedPlatform?.slug || state.saleDraft.platformSlug : '';
   withRenderTransition(() => {
     state.tab = tab;
     state.route = tab === 'sell' ? 'sell' : 'platforms';
     state.selectedAccount = null;
-    state.selectedPlatform = null;
+    state.selectedPlatform = tab === 'sell' ? state.selectedPlatform : null;
+    state.saleDraft.platformSlug = platformSlug;
+    state.saleDraft.lookup = null;
     state.accounts = [];
     render();
   });
+}
+
+function setSalePlatform(slug) {
+  state.saleDraft.platformSlug = slug;
+  state.saleDraft.lookup = null;
+
+  const form = document.querySelector('#sellForm');
+  if (!form) return;
+
+  form.elements.platformSlug.value = slug;
+  form.elements.accountGameId.value = '';
+  form.elements.accountServerId.value = '';
+  form.elements.accountNickname.value = '';
+  form.elements.accountRegion.value = '';
+
+  for (const button of form.querySelectorAll('[data-action="select-sale-platform"]')) {
+    button.classList.toggle('selected', button.dataset.slug === slug);
+  }
+
+  const selectedPlatform = state.platforms.find((platform) => platform.slug === slug);
+  const idInput = form.elements.accountIdRaw;
+  if (idInput) {
+    idInput.placeholder = selectedPlatform?.slug === 'mobile-legends' ? '516874602 (6253)' : 'Akkaunt ID yoki username';
+  }
+
+  setLookupStatus("Platforma tanlandi. Akkaunt ID ni kiriting va tekshiring.", 'muted');
+}
+
+function setLookupStatus(message, tone = 'muted') {
+  const status = document.querySelector('#lookupStatus');
+  if (!status) return;
+  status.className = `lookup-status ${tone}`;
+  status.innerHTML = message;
+}
+
+function applyLookupToForm(result) {
+  const form = document.querySelector('#sellForm');
+  if (!form) return;
+
+  form.elements.accountGameId.value = result.accountId || '';
+  form.elements.accountServerId.value = result.serverId || '';
+  form.elements.accountNickname.value = result.nickname || '';
+  form.elements.accountRegion.value = result.region || '';
+
+  if (!form.elements.title.value.trim()) {
+    form.elements.title.value = result.raw || result.nickname || result.accountId || '';
+  }
+
+  state.saleDraft.lookup = result;
+  const parts = [
+    result.nickname ? `Nik: <strong>${escapeHtml(result.nickname)}</strong>` : '',
+    result.region ? `Region: <strong>${escapeHtml(result.region)}</strong>` : '',
+    result.raw ? `ID: <strong>${escapeHtml(result.raw)}</strong>` : ''
+  ].filter(Boolean);
+
+  setLookupStatus(parts.join('<br />') || "Ma'lumot topilmadi.", 'success');
+}
+
+async function lookupAccount() {
+  const form = document.querySelector('#sellForm');
+  if (!form) return;
+
+  const platformSlug = form.elements.platformSlug.value;
+  const accountIdRaw = form.elements.accountIdRaw.value.trim();
+
+  if (!platformSlug) {
+    showToast('Avval platformani tanlang.');
+    return;
+  }
+
+  if (!accountIdRaw) {
+    showToast('Avval akkaunt ID kiriting.');
+    form.elements.accountIdRaw.focus();
+    return;
+  }
+
+  setLookupStatus('Tekshirilmoqda...', 'loading');
+
+  try {
+    const params = new URLSearchParams({
+      platform: platformSlug,
+      accountId: accountIdRaw
+    });
+    const result = await api(`/api/account-lookup?${params.toString()}`);
+    applyLookupToForm(result);
+  } catch (error) {
+    form.elements.accountGameId.value = '';
+    form.elements.accountServerId.value = '';
+    form.elements.accountNickname.value = '';
+    form.elements.accountRegion.value = '';
+    state.saleDraft.lookup = null;
+    setLookupStatus(escapeHtml(error.message), 'error');
+    showToast(error.message);
+  }
 }
 
 function addPendingFiles(files) {
@@ -586,7 +738,7 @@ function addPendingFiles(files) {
     const url = URL.createObjectURL(file);
     objectUrls.add(url);
     accepted.push({
-      id: crypto.randomUUID(),
+      id: uid(),
       file,
       type,
       url
@@ -662,8 +814,21 @@ async function uploadMediaFile(item, index, total) {
 async function submitSale(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const formData = new FormData(form);
+  let formData = new FormData(form);
+  const platformSlug = String(formData.get('platformSlug') || '');
+  const accountIdRaw = String(formData.get('accountIdRaw') || '').trim();
   const price = parsePrice(formData.get('price'));
+
+  if (!platformSlug) {
+    showToast('Avval platformani tanlang.');
+    return;
+  }
+
+  if (platformSlug === 'mobile-legends' && !accountIdRaw) {
+    showToast('Mobile Legends uchun akkaunt ID kiriting.');
+    form.elements.accountIdRaw.focus();
+    return;
+  }
 
   if (!price || price <= 0) {
     showToast("Narx kiritilmasa, akkaunt sotuvga qo'yilmaydi.");
@@ -673,6 +838,15 @@ async function submitSale(event) {
 
   try {
     setFormBusy(true, 'Tekshirilmoqda...');
+
+    if (platformSlug === 'mobile-legends' && !form.elements.accountGameId.value) {
+      setFormBusy(false, '');
+      await lookupAccount();
+      if (!form.elements.accountGameId.value) return;
+      formData = new FormData(form);
+      setFormBusy(true, 'Tekshirilmoqda...');
+    }
+
     const media = [];
 
     for (let index = 0; index < state.pendingFiles.length; index += 1) {
@@ -688,6 +862,11 @@ async function submitSale(event) {
         description: formData.get('description'),
         price,
         platformSlug: formData.get('platformSlug'),
+        accountIdRaw: formData.get('accountIdRaw'),
+        accountGameId: formData.get('accountGameId'),
+        accountServerId: formData.get('accountServerId'),
+        accountNickname: formData.get('accountNickname'),
+        accountRegion: formData.get('accountRegion'),
         media
       }
     });
@@ -760,6 +939,8 @@ app.addEventListener('click', async (event) => {
 
   if (action === 'open-platform') await openPlatform(control.dataset.slug);
   if (action === 'open-account') openAccount(control.dataset.id);
+  if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
+  if (action === 'lookup-account') await lookupAccount();
   if (action === 'back') goBack();
   if (action === 'refresh') await refreshCurrent();
   if (action === 'tab-store') switchTab('store');

@@ -1,6 +1,5 @@
 import {
   getBaseUrl,
-  getSupabase,
   normalizeUsername,
   readJson,
   requireSupabase,
@@ -10,6 +9,10 @@ import {
 
 const DEFAULT_ADMIN_USERNAME = 'Geto_senpai';
 const DEFAULT_BOT_USERNAME = 'GetosenpaiShopBot';
+
+function isMissingColumnError(error) {
+  return error?.code === '42703' || /column .* does not exist/i.test(error?.message || '');
+}
 
 function telegramApiUrl(method) {
   return `https://api.telegram.org/bot${process.env.BOT_TOKEN}/${method}`;
@@ -85,6 +88,7 @@ function greetingPayload(chatId, req) {
 async function markSoldByTitle(title) {
   const supabase = requireSupabase();
   const normalizedTitle = title.trim();
+  const accountIdMatch = normalizedTitle.match(/\d{5,}/);
 
   const exact = await supabase
     .from('accounts')
@@ -97,11 +101,23 @@ async function markSoldByTitle(title) {
 
   let matches = exact.data || [];
 
+  if (!matches.length && accountIdMatch) {
+    const byGameId = await supabase
+      .from('accounts')
+      .select('id,title')
+      .eq('account_game_id', accountIdMatch[0])
+      .eq('status', 'available')
+      .limit(20);
+
+    if (byGameId.error && !isMissingColumnError(byGameId.error)) throw byGameId.error;
+    matches = byGameId.data || [];
+  }
+
   if (!matches.length) {
     const fuzzy = await supabase
       .from('accounts')
       .select('id,title')
-      .ilike('title', normalizedTitle)
+      .ilike('title', `%${normalizedTitle}%`)
       .eq('status', 'available')
       .limit(20);
 

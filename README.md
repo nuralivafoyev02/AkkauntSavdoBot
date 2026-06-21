@@ -19,9 +19,10 @@ Vite dev server local holatda `api/*` Vercel funksiyalarini ham emulyatsiya qila
 
 ## Supabase
 
-1. Supabase SQL Editor ichida `supabase/001_schema.sql` faylini ishga tushiring.
-2. Storage bucket nomi default: `account-media`.
-3. Vercel env qiymatlariga `SUPABASE_URL` va `SUPABASE_SERVICE_ROLE_KEY` qo'ying.
+1. Yangi loyiha bo'lsa Supabase SQL Editor ichida `supabase/001_schema.sql` faylini ishga tushiring.
+2. Oldin schema qo'yilgan bo'lsa, `supabase/002_account_lookup_metadata.sql` faylini ham ishga tushiring.
+3. Storage bucket nomi default: `account-media`.
+4. Vercel env qiymatlariga `SUPABASE_URL` va `SUPABASE_SERVICE_ROLE_KEY` qo'ying.
 
 ## Vercel env
 

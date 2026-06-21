@@ -15,6 +15,10 @@ create table if not exists public.accounts (
   platform_slug text not null references public.platforms(slug) on update cascade on delete restrict,
   title text not null,
   description text not null,
+  account_game_id text,
+  account_server_id text,
+  account_nickname text,
+  account_region text,
   price_uzs bigint not null check (price_uzs > 0),
   status text not null default 'available' check (status in ('available', 'sold', 'hidden')),
   seller_tg_id bigint,
@@ -32,6 +36,10 @@ create index if not exists accounts_platform_status_created_idx
 
 create index if not exists accounts_status_created_idx
   on public.accounts (status, created_at desc);
+
+create index if not exists accounts_game_id_idx
+  on public.accounts (account_game_id)
+  where account_game_id is not null;
 
 create or replace function public.set_updated_at()
 returns trigger
