@@ -42,6 +42,11 @@ function formatPrice(value) {
   return `${new Intl.NumberFormat('uz-UZ').format(Number(value || 0))} so'm`;
 }
 
+function formatNumberInput(value) {
+  const digits = String(value || '').replace(/[^\d]/g, '');
+  return digits ? new Intl.NumberFormat('uz-UZ').format(Number(digits)) : '';
+}
+
 function initials(title) {
   return String(title || 'A')
     .split(/\s+/)
@@ -258,7 +263,8 @@ function renderGeneratedCover(account) {
 }
 
 function firstMedia(account) {
-  return Array.isArray(account.media) ? account.media[0] : null;
+  if (!Array.isArray(account.media)) return null;
+  return account.media.find((item) => item.type === 'image') || account.media[0] || null;
 }
 
 function renderAccountCover(account) {
@@ -786,6 +792,11 @@ function parsePrice(value) {
   return Number(String(value || '').replace(/[^\d]/g, ''));
 }
 
+function formatPriceField(input) {
+  const formatted = formatNumberInput(input.value);
+  input.value = formatted;
+}
+
 function setFormBusy(isBusy, message = '') {
   const form = document.querySelector('#sellForm');
   if (!form) return;
@@ -980,6 +991,12 @@ app.addEventListener('click', async (event) => {
 app.addEventListener('change', (event) => {
   if (event.target.id === 'mediaInput') {
     addPendingFiles(event.target.files || []);
+  }
+});
+
+app.addEventListener('input', (event) => {
+  if (event.target.matches('input[name="price"]')) {
+    formatPriceField(event.target);
   }
 });
 

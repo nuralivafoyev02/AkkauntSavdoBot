@@ -178,7 +178,7 @@ button {
 .account-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .platform-card,
@@ -198,15 +198,15 @@ button {
 
 .platform-card {
   position: relative;
-  min-height: 218px;
-  padding: 12px;
+  min-height: 178px;
+  padding: 10px;
 }
 
 .platform-card strong,
 .account-card span {
   display: block;
-  margin-top: 12px;
-  font-size: 18px;
+  margin-top: 9px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -235,7 +235,7 @@ button {
 .generated-cover {
   position: relative;
   display: grid;
-  min-height: 132px;
+  min-height: 108px;
   place-items: center;
   overflow: hidden;
   border-radius: var(--radius);
@@ -318,13 +318,13 @@ button {
 }
 
 .account-card {
-  padding: 0 0 14px;
+  padding: 0 0 11px;
 }
 
 .account-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.1 / 1;
+  aspect-ratio: 1.22 / 1;
   overflow: hidden;
   background: var(--surface-2);
 }
@@ -361,9 +361,9 @@ button {
 
 .account-card strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: color-mix(in srgb, var(--primary), var(--text) 22%);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 950;
 }
 

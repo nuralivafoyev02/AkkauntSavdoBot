@@ -13,7 +13,7 @@ export const mockPlatforms = [
     title: 'Mobile Legends',
     subtitle: 'Skin, rank va kolleksiya',
     accent_color: '#b24cff',
-    image_url: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a0/Mobile_Legends_Bang_Bang_2025_logo.png/250px-Mobile_Legends_Bang_Bang_2025_logo.png',
+    image_url: '/assets/mobile-legends-5v5.png',
     sort_order: 20,
     count: 4
   },
@@ -35,24 +35,6 @@ export const mockPlatforms = [
     sort_order: 40,
     count: 2
   },
-  {
-    slug: 'telegram',
-    title: 'Telegram',
-    subtitle: 'Kanal, bot va username',
-    accent_color: '#4f5d75',
-    image_url: 'https://cdn.simpleicons.org/telegram/ffffff',
-    sort_order: 50,
-    count: 1
-  },
-  {
-    slug: 'instagram',
-    title: 'Instagram',
-    subtitle: 'Auditoriya va sahifalar',
-    accent_color: '#c23b57',
-    image_url: 'https://cdn.simpleicons.org/instagram/ffffff',
-    sort_order: 60,
-    count: 1
-  }
 ];
 
 const now = Date.now();
