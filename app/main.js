@@ -11,6 +11,9 @@ const state = {
   demo: false,
   platforms: [],
   accounts: [],
+  accountsRequestId: 0,
+  accountStatus: 'available',
+  telegramSection: 'nft',
   selectedPlatform: null,
   selectedAccount: null,
   saleDraft: {
@@ -28,6 +31,32 @@ const state = {
 };
 
 const objectUrls = new Set();
+const SERVICE_PLATFORM_SLUGS = new Set(['telegram']);
+const ACCOUNT_STATUSES = new Set(['available', 'sold']);
+const TELEGRAM_SECTIONS = {
+  nft: {
+    title: 'NFT',
+    label: 'NFT',
+    headline: 'Telegram NFT',
+    copy: "Telegram NFT sovg'alarini sotish yoki sotib olish.",
+    accent: '#2aabee'
+  },
+  username: {
+    title: 'Username',
+    label: 'Username',
+    headline: 'Telegram username',
+    copy: "Band username sotish yoki sotib olish.",
+    accent: '#28a86b'
+  }
+};
+
+function isServicePlatform(slug) {
+  return SERVICE_PLATFORM_SLUGS.has(slug);
+}
+
+function cancelAccountLoads() {
+  state.accountsRequestId += 1;
+}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -144,21 +173,33 @@ async function loadPlatforms() {
   }
 }
 
-async function loadAccounts(platformSlug) {
+async function loadAccounts(platformSlug, status = state.accountStatus) {
+  const nextStatus = ACCOUNT_STATUSES.has(status) ? status : 'available';
+  const requestId = state.accountsRequestId + 1;
+  state.accountsRequestId = requestId;
   state.loading = true;
   state.error = '';
   state.accounts = [];
+  state.accountStatus = nextStatus;
   render();
 
   try {
-    const payload = await api(`/api/accounts?platform=${encodeURIComponent(platformSlug)}`);
+    const params = new URLSearchParams({
+      platform: platformSlug,
+      status: nextStatus
+    });
+    const payload = await api(`/api/accounts?${params.toString()}`);
+    if (requestId !== state.accountsRequestId) return;
     state.accounts = payload.accounts || [];
     state.demo = Boolean(payload.demo);
   } catch (error) {
+    if (requestId !== state.accountsRequestId) return;
     state.error = error.message;
   } finally {
-    state.loading = false;
-    render();
+    if (requestId === state.accountsRequestId) {
+      state.loading = false;
+      render();
+    }
   }
 }
 
@@ -181,21 +222,33 @@ function showToast(message) {
 function headerTitle() {
   if (state.route === 'sell') return 'Akkaunt sotish';
   if (state.route === 'detail') return state.selectedAccount?.title || 'Akkaunt';
+  if (state.route === 'telegram') return state.selectedPlatform?.title || 'Telegram';
   if (state.route === 'accounts') return state.selectedPlatform?.title || 'Akkauntlar';
   return "Akkauntlar do'koni";
 }
 
 function renderHeader() {
-  const canGoBack = state.route === 'accounts' || state.route === 'detail';
-  const subtitle = state.route === 'platforms' ? 'Platformani tanlang' : 'Geto Senpai Shop';
+  const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram';
+  const subtitle =
+    state.route === 'platforms'
+      ? 'Platformani tanlang'
+      : state.route === 'sell'
+        ? 'Sotuvchi paneli'
+        : state.route === 'detail'
+          ? 'Akkaunt tafsiloti'
+          : state.route === 'telegram'
+            ? 'Telegram savdosi'
+            : state.accountStatus === 'sold'
+              ? 'Sotilgan akkauntlar'
+              : 'Sotuvdagi akkauntlar';
 
   return `
-    <header class="topbar">
+    <header class="topbar" data-route="${escapeHtml(state.route)}">
       <button class="icon-button ${canGoBack ? '' : 'is-hidden'}" type="button" data-action="back" aria-label="Orqaga">
         <span aria-hidden="true">‹</span>
       </button>
       <div class="brand-block">
-        <p>${escapeHtml(subtitle)}</p>
+        <span class="brand-kicker">${escapeHtml(subtitle)}</span>
         <h1>${escapeHtml(headerTitle())}</h1>
       </div>
       <button class="icon-button" type="button" data-action="refresh" aria-label="Yangilash">
@@ -261,7 +314,8 @@ function firstMedia(account) {
 
 function renderAccountCover(account) {
   const media = firstMedia(account);
-  const badge = account.is_new ? 'NEW' : account.is_top ? 'TOP' : '';
+  const badge = account.status === 'sold' ? 'SOTILDI' : account.is_new ? 'NEW' : account.is_top ? 'TOP' : '';
+  const badgeClass = account.status === 'sold' ? 'is-sold' : account.is_new ? 'is-new' : '';
 
   return `
     <div class="account-cover">
@@ -272,7 +326,7 @@ function renderAccountCover(account) {
             : `<img src="${escapeHtml(media.url)}" alt="${escapeHtml(account.title)}" loading="lazy" />`
           : renderGeneratedCover(account)
       }
-      ${badge ? `<span class="corner-badge ${account.is_new ? 'is-new' : ''}">${badge}</span>` : ''}
+      ${badge ? `<span class="corner-badge ${badgeClass}">${badge}</span>` : ''}
     </div>
   `;
 }
@@ -287,42 +341,65 @@ function accountMetaLine(account) {
   return bits.join(' · ');
 }
 
+function renderAccountStatusTabs() {
+  return `
+    <section class="account-status-tabs" aria-label="Akkaunt holati">
+      <button class="${state.accountStatus === 'available' ? 'selected' : ''}" type="button" data-action="set-account-status" data-status="available">
+        Sotuvda
+      </button>
+      <button class="${state.accountStatus === 'sold' ? 'selected' : ''}" type="button" data-action="set-account-status" data-status="sold">
+        Sotilgan
+      </button>
+    </section>
+  `;
+}
+
 function renderAccounts() {
-  if (state.loading) return renderSkeletonGrid('account');
-  if (state.error) return renderError();
+  const isSold = state.accountStatus === 'sold';
 
   const empty = `
     <div class="empty-state">
-      <strong>Hali akkaunt yo'q</strong>
-      <p>Bu platformaga birinchi akkauntni siz qo'shishingiz mumkin.</p>
-      <button class="primary-button" type="button" data-action="tab-sell">Akkaunt sotish</button>
+      <strong>${isSold ? "Sotilgan akkaunt yo'q" : "Hali akkaunt yo'q"}</strong>
+      <p>${isSold ? "Bu platformada sotilgan akkauntlar hali yo'q." : "Bu platformaga birinchi akkauntni siz qo'shishingiz mumkin."}</p>
+      ${isSold ? '' : '<button class="primary-button" type="button" data-action="tab-sell">Akkaunt sotish</button>'}
     </div>
   `;
 
+  let body = '';
+  if (state.loading) {
+    body = renderSkeletonGrid('account');
+  } else if (state.error) {
+    body = renderError();
+  } else if (state.accounts.length) {
+    body = `
+      <section class="account-grid">
+        ${state.accounts
+          .map(
+            (account, index) => `
+              <button class="account-card ${account.status === 'sold' ? 'is-sold' : ''}" type="button" data-action="open-account" data-id="${escapeHtml(account.id)}" style="--delay:${index * 35}ms">
+                ${renderAccountCover(account)}
+                <span>${escapeHtml(account.title)}</span>
+                ${accountMetaLine(account) ? `<small>${escapeHtml(accountMetaLine(account))}</small>` : ''}
+                <strong>${formatPrice(account.price_uzs)}</strong>
+              </button>
+            `
+          )
+          .join('')}
+      </section>
+    `;
+  } else {
+    body = empty;
+  }
+
   return `
+    ${renderAccountStatusTabs()}
+
     <section class="list-toolbar">
       <button class="chip-button" type="button" data-action="back">Platformalar</button>
-      <span>${state.accounts.length} ta variant</span>
+      <span>${state.accounts.length} ta ${isSold ? 'sotilgan' : 'variant'}</span>
     </section>
 
-    ${
-      state.accounts.length
-        ? `<section class="account-grid">
-            ${state.accounts
-              .map(
-                (account, index) => `
-                  <button class="account-card" type="button" data-action="open-account" data-id="${escapeHtml(account.id)}" style="--delay:${index * 35}ms">
-                    ${renderAccountCover(account)}
-                    <span>${escapeHtml(account.title)}</span>
-                    ${accountMetaLine(account) ? `<small>${escapeHtml(accountMetaLine(account))}</small>` : ''}
-                    <strong>${formatPrice(account.price_uzs)}</strong>
-                  </button>
-                `
-              )
-              .join('')}
-          </section>`
-        : empty
-    }
+    ${body}
   `;
 }
 
@@ -358,6 +435,7 @@ function buyText(account) {
 function renderDetail() {
   const account = state.selectedAccount;
   if (!account) return renderError("Akkaunt topilmadi.");
+  const isSold = account.status === 'sold';
 
   return `
     <article class="detail-view">
@@ -367,7 +445,7 @@ function renderDetail() {
 
       <section class="detail-info">
         <div class="detail-title-row">
-          <span class="corner-badge ${account.is_new ? 'is-new' : ''}">${account.is_new ? 'NEW' : account.is_top ? 'TOP' : 'SHOP'}</span>
+          <span class="corner-badge ${isSold ? 'is-sold' : account.is_new ? 'is-new' : ''}">${isSold ? 'SOTILDI' : account.is_new ? 'NEW' : account.is_top ? 'TOP' : 'SHOP'}</span>
           <h2>${escapeHtml(account.title)}</h2>
         </div>
         <strong class="detail-price">${formatPrice(account.price_uzs)}</strong>
@@ -383,14 +461,17 @@ function renderDetail() {
         <p>${escapeHtml(account.description).replace(/\n/g, '<br />')}</p>
       </section>
 
-      <button class="buy-button" type="button" data-action="buy-account">Sotib olish</button>
+      <button class="buy-button ${isSold ? 'is-disabled' : ''}" type="button" data-action="${isSold ? '' : 'buy-account'}" ${isSold ? 'disabled' : ''}>${isSold ? 'Sotilgan' : 'Sotib olish'}</button>
     </article>
   `;
 }
 
 function renderSell() {
-  const selectedSlug = state.saleDraft.platformSlug;
-  const selectedPlatform = state.platforms.find((platform) => platform.slug === selectedSlug);
+  const salePlatforms = state.platforms.filter((platform) => !isServicePlatform(platform.slug));
+  const selectedSlug = salePlatforms.some((platform) => platform.slug === state.saleDraft.platformSlug)
+    ? state.saleDraft.platformSlug
+    : salePlatforms[0]?.slug || 'mobile-legends';
+  const selectedPlatform = salePlatforms.find((platform) => platform.slug === selectedSlug);
 
   return `
     <form class="sell-form" id="sellForm">
@@ -440,7 +521,7 @@ function renderSell() {
       </div>
 
       <section class="sale-platforms" aria-label="Platforma tanlash">
-        ${state.platforms
+        ${salePlatforms
           .map(
             (platform) => `
               <button class="${platform.slug === selectedSlug ? 'selected' : ''}" type="button" data-action="select-sale-platform" data-slug="${escapeHtml(platform.slug)}">
@@ -517,6 +598,39 @@ function renderError(message = state.error) {
   `;
 }
 
+function renderTelegramServices() {
+  const activeKey = TELEGRAM_SECTIONS[state.telegramSection] ? state.telegramSection : 'nft';
+  const section = TELEGRAM_SECTIONS[activeKey];
+
+  return `
+    <section class="telegram-hub">
+      <section class="service-tabs" aria-label="Telegram bo'limlari">
+        ${Object.entries(TELEGRAM_SECTIONS)
+          .map(
+            ([key, item]) => `
+              <button class="${key === activeKey ? 'selected' : ''}" type="button" data-action="set-telegram-section" data-section="${escapeHtml(key)}">
+                ${escapeHtml(item.label)}
+              </button>
+            `
+          )
+          .join('')}
+      </section>
+
+      <article class="telegram-service-card" style="--accent:${escapeHtml(section.accent)}">
+        <div class="telegram-service-mark" aria-hidden="true">
+          <span>${escapeHtml(initials(section.title))}</span>
+        </div>
+        <h2>${escapeHtml(section.headline)}</h2>
+        <p>${escapeHtml(section.copy)}</p>
+        <div class="service-actions">
+          <button class="primary-button" type="button" data-action="telegram-service-contact" data-service="${escapeHtml(activeKey)}" data-intent="buy">Sotib olish</button>
+          <button class="secondary-button" type="button" data-action="telegram-service-contact" data-service="${escapeHtml(activeKey)}" data-intent="sell">Sotish</button>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
 function renderBottomNav() {
   return `
     <nav class="bottom-nav" aria-label="Asosiy">
@@ -550,6 +664,7 @@ function renderLightbox() {
 
 function currentContent() {
   if (state.route === 'sell') return renderSell();
+  if (state.route === 'telegram') return renderTelegramServices();
   if (state.route === 'accounts') return renderAccounts();
   if (state.route === 'detail') return renderDetail();
   return renderPlatforms();
@@ -580,12 +695,30 @@ async function openPlatform(slug) {
   const platform = findPlatform(slug);
   if (!platform) return;
 
+  if (isServicePlatform(slug)) {
+    withRenderTransition(() => {
+      cancelAccountLoads();
+      state.selectedPlatform = platform;
+      state.selectedAccount = null;
+      state.accounts = [];
+      state.route = 'telegram';
+      state.tab = 'store';
+      state.loading = false;
+      render();
+    });
+    return;
+  }
+
   withRenderTransition(() => {
     state.selectedPlatform = platform;
     state.route = 'accounts';
     state.tab = 'store';
+    state.accountStatus = 'available';
+    state.accounts = [];
+    state.loading = true;
+    render();
   });
-  await loadAccounts(slug);
+  await loadAccounts(slug, 'available');
 }
 
 function openAccount(id) {
@@ -612,9 +745,22 @@ function goBack() {
 
   if (state.route === 'accounts') {
     withRenderTransition(() => {
+      cancelAccountLoads();
       state.route = 'platforms';
       state.selectedPlatform = null;
       state.accounts = [];
+      state.loading = false;
+      render();
+    });
+    return;
+  }
+
+  if (state.route === 'telegram') {
+    withRenderTransition(() => {
+      cancelAccountLoads();
+      state.route = 'platforms';
+      state.selectedPlatform = null;
+      state.loading = false;
       render();
     });
   }
@@ -622,7 +768,7 @@ function goBack() {
 
 async function refreshCurrent() {
   if (state.route === 'accounts' && state.selectedPlatform) {
-    await loadAccounts(state.selectedPlatform.slug);
+    await loadAccounts(state.selectedPlatform.slug, state.accountStatus);
     return;
   }
 
@@ -630,20 +776,54 @@ async function refreshCurrent() {
 }
 
 function switchTab(tab) {
-  const platformSlug = tab === 'sell' ? state.selectedPlatform?.slug || state.saleDraft.platformSlug || 'mobile-legends' : 'mobile-legends';
+  const currentPlatformSlug = state.selectedPlatform?.slug;
+  const platformSlug =
+    tab === 'sell'
+      ? currentPlatformSlug && !isServicePlatform(currentPlatformSlug)
+        ? currentPlatformSlug
+        : state.saleDraft.platformSlug || 'mobile-legends'
+      : state.saleDraft.platformSlug || 'mobile-legends';
+
   withRenderTransition(() => {
+    cancelAccountLoads();
     state.tab = tab;
     state.route = tab === 'sell' ? 'sell' : 'platforms';
     state.selectedAccount = null;
-    state.selectedPlatform = tab === 'sell' ? state.selectedPlatform : null;
-    state.saleDraft.platformSlug = platformSlug;
+    state.selectedPlatform = null;
+    state.saleDraft.platformSlug = isServicePlatform(platformSlug) ? 'mobile-legends' : platformSlug;
     state.saleDraft.lookup = null;
+    state.accountStatus = 'available';
     state.accounts = [];
+    state.loading = false;
+    render();
+  });
+}
+
+async function setAccountStatus(status) {
+  if (!ACCOUNT_STATUSES.has(status) || status === state.accountStatus || !state.selectedPlatform) return;
+
+  withRenderTransition(() => {
+    state.accountStatus = status;
+    state.accounts = [];
+    state.loading = true;
+    render();
+  });
+
+  await loadAccounts(state.selectedPlatform.slug, status);
+}
+
+function setTelegramSection(section) {
+  if (!TELEGRAM_SECTIONS[section] || section === state.telegramSection) return;
+
+  withRenderTransition(() => {
+    state.telegramSection = section;
     render();
   });
 }
 
 function setSalePlatform(slug) {
+  if (isServicePlatform(slug)) return;
+
   state.saleDraft.platformSlug = slug;
   state.saleDraft.lookup = null;
 
@@ -795,8 +975,11 @@ function setFormBusy(isBusy, message = '') {
 
   const button = form.querySelector('button[type="submit"]');
   const status = form.querySelector('#formStatus');
+  if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent;
+
   form.classList.toggle('is-busy', isBusy);
   button.disabled = isBusy;
+  button.textContent = isBusy ? "Ma'lumotlar yuklanmoqda..." : button.dataset.idleLabel;
   status.textContent = message;
 }
 
@@ -918,18 +1101,14 @@ async function submitSale(event) {
   }
 }
 
-async function handleBuy() {
-  const account = state.selectedAccount;
-  if (!account) return;
-
-  const text = buyText(account);
+async function openAdminWithText(text, toastMessage = 'Xabar matni tayyor. Chat ochilmoqda.') {
   try {
     await navigator.clipboard?.writeText(text);
   } catch {
     // Clipboard is a convenience fallback only.
   }
 
-  showToast('Xabar matni tayyor. Chat ochilmoqda.');
+  showToast(toastMessage);
   const admin = state.config.adminUsername.replace(/^@/, '');
   const httpsLink = `https://t.me/${admin}?text=${encodeURIComponent(text)}`;
   const tgLink = `tg://resolve?domain=${admin}&text=${encodeURIComponent(text)}`;
@@ -943,6 +1122,31 @@ async function handleBuy() {
   window.setTimeout(() => {
     window.open(`https://t.me/${admin}`, '_blank', 'noopener,noreferrer');
   }, 450);
+}
+
+async function handleBuy() {
+  const account = state.selectedAccount;
+  if (!account) return;
+
+  if (account.status === 'sold') {
+    showToast('Bu akkaunt sotilgan.');
+    return;
+  }
+
+  await openAdminWithText(buyText(account));
+}
+
+function telegramServiceText(serviceKey, intent) {
+  const service = TELEGRAM_SECTIONS[serviceKey] || TELEGRAM_SECTIONS.nft;
+  const action = intent === 'sell' ? 'sotmoqchiman' : 'sotib olmoqchiman';
+  return `Assalomu alaykum, ${service.headline} ${action}. @${state.config.botUsername} mini appidan admin profiliga shu maqsadda o'tdim: ${service.headline} ${action}.`;
+}
+
+async function handleTelegramServiceContact(control) {
+  const service = control.dataset.service || state.telegramSection;
+  const intent = control.dataset.intent || 'buy';
+  const text = telegramServiceText(service, intent);
+  await openAdminWithText(text, 'Maqsad clipboardga yozildi. Admin chat ochilmoqda.');
 }
 
 function openPreview(index) {
@@ -965,6 +1169,8 @@ app.addEventListener('click', async (event) => {
 
   if (action === 'open-platform') await openPlatform(control.dataset.slug);
   if (action === 'open-account') openAccount(control.dataset.id);
+  if (action === 'set-account-status') await setAccountStatus(control.dataset.status);
+  if (action === 'set-telegram-section') setTelegramSection(control.dataset.section);
   if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
   if (action === 'lookup-account') await lookupAccount();
   if (action === 'back') goBack();
@@ -973,6 +1179,7 @@ app.addEventListener('click', async (event) => {
   if (action === 'tab-sell') switchTab('sell');
   if (action === 'remove-file') removePendingFile(control.dataset.id);
   if (action === 'buy-account') await handleBuy();
+  if (action === 'telegram-service-contact') await handleTelegramServiceContact(control);
   if (action === 'preview-media') openPreview(control.dataset.index);
   if (action === 'close-lightbox') {
     state.lightbox = null;

@@ -90,7 +90,7 @@ insert into public.platforms (slug, title, subtitle, accent_color, sort_order) v
   ('mobile-legends', 'Mobile Legends', 'Skin, rank va kolleksiya', '#b24cff', 20),
   ('pubg-mobile', 'PUBG Mobile', 'UC, skin va inventar', '#d4a017', 30),
   ('steam', 'Steam', 'Game library va profil', '#1b8a6b', 40),
-  ('telegram', 'Telegram', 'Kanal, bot va username', '#4f5d75', 50),
+  ('telegram', 'Telegram', 'NFT va username savdosi', '#2aabee', 50),
   ('instagram', 'Instagram', 'Auditoriya va sahifalar', '#c23b57', 60)
 on conflict (slug) do update set
   title = excluded.title,

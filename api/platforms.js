@@ -5,10 +5,20 @@ const PLATFORM_IMAGES = {
   'free-fire': 'https://upload.wikimedia.org/wikipedia/en/thumb/3/38/Free_Fire_New_Logo.svg/250px-Free_Fire_New_Logo.svg.png',
   'mobile-legends': '/assets/mobile-legends-5v5.png',
   'pubg-mobile': 'https://www.pubgmobile.com/common/images/icon_logo.jpg',
-  steam: 'https://cdn.simpleicons.org/steam/ffffff'
+  steam: 'https://cdn.simpleicons.org/steam/ffffff',
+  telegram: 'https://cdn.simpleicons.org/telegram/ffffff'
 };
 
-const VISIBLE_PLATFORMS = new Set(['free-fire', 'mobile-legends', 'pubg-mobile', 'steam']);
+const VISIBLE_PLATFORMS = new Set(['free-fire', 'mobile-legends', 'pubg-mobile', 'steam', 'telegram']);
+const DEFAULT_PLATFORM_ROWS = [
+  {
+    slug: 'telegram',
+    title: 'Telegram',
+    subtitle: 'NFT va username savdosi',
+    accent_color: '#2aabee',
+    sort_order: 50
+  }
+];
 
 function attachCounts(platforms, accounts) {
   const counts = accounts.reduce((acc, account) => {
@@ -17,8 +27,24 @@ function attachCounts(platforms, accounts) {
     }
     return acc;
   }, {});
+  const platformMap = new Map((platforms || []).map((platform) => [platform.slug, platform]));
 
-  return platforms
+  for (const platform of DEFAULT_PLATFORM_ROWS) {
+    const existing = platformMap.get(platform.slug);
+    platformMap.set(
+      platform.slug,
+      existing
+        ? {
+            ...platform,
+            ...existing,
+            subtitle: platform.subtitle,
+            accent_color: platform.accent_color
+          }
+        : platform
+    );
+  }
+
+  return [...platformMap.values()]
     .filter((platform) => VISIBLE_PLATFORMS.has(platform.slug))
     .map((platform) => ({
       ...platform,

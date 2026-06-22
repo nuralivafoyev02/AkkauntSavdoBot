@@ -46,12 +46,15 @@ async function listAccounts(req, res) {
   const url = new URL(req.url, getBaseUrl(req));
   const platform = url.searchParams.get('platform');
   const id = url.searchParams.get('id');
+  const statusParam = url.searchParams.get('status');
+  const status = ['available', 'sold'].includes(statusParam) ? statusParam : 'available';
 
   const supabase = getSupabase();
   if (!supabase) {
     let accounts = mockAccounts.map(publicAccount);
     if (platform) accounts = accounts.filter((account) => account.platform_slug === platform);
     if (id) accounts = accounts.filter((account) => account.id === id);
+    accounts = accounts.filter((account) => account.status === status);
 
     sendJson(res, 200, {
       demo: true,
@@ -62,11 +65,11 @@ async function listAccounts(req, res) {
 
   function buildQuery(select) {
     let query = supabase
-    .from('accounts')
-    .select(select)
-    .eq('status', 'available')
-    .order('is_top', { ascending: false })
-    .order('created_at', { ascending: false });
+      .from('accounts')
+      .select(select)
+      .eq('status', status)
+      .order('is_top', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (platform) query = query.eq('platform_slug', platform);
     if (id) query = query.eq('id', id);

@@ -35,6 +35,15 @@ export const mockPlatforms = [
     sort_order: 40,
     count: 2
   },
+  {
+    slug: 'telegram',
+    title: 'Telegram',
+    subtitle: 'NFT va username savdosi',
+    accent_color: '#2aabee',
+    image_url: 'https://cdn.simpleicons.org/telegram/ffffff',
+    sort_order: 50,
+    count: 0
+  },
 ];
 
 const now = Date.now();
@@ -83,6 +92,17 @@ export const mockAccounts = [
     is_top: false,
     media: [],
     created_at: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'demo-ml-sold-001',
+    platform_slug: 'mobile-legends',
+    title: 'ML Collector 2020',
+    description: "Admin tomonidan sotildi deb belgilangan demo akkaunt.",
+    price_uzs: 3100000,
+    status: 'sold',
+    is_top: false,
+    media: [],
+    created_at: new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 'demo-steam-001',

@@ -10,7 +10,7 @@ create table if not exists public.bot_users (
   first_seen_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
   last_error text,
-  last_error_at timestamptz
+  last_error_at timestamptzа
 );
 
 create index if not exists bot_users_active_last_seen_idx

@@ -65,7 +65,7 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  padding: max(10px, env(safe-area-inset-top)) 14px calc(104px + env(safe-area-inset-bottom));
+  padding: max(10px, env(safe-area-inset-top)) 14px calc(86px + env(safe-area-inset-bottom));
 }
 
 .topbar {
@@ -73,12 +73,15 @@ button {
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
   gap: 8px;
   align-items: center;
-  padding: 4px 0 10px;
-  background: linear-gradient(to bottom, var(--bg) 72%, transparent);
+  min-height: 58px;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line), transparent 28%);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg), transparent 3%) 78%, transparent);
   backdrop-filter: blur(18px);
+  view-transition-name: topbar;
 }
 
 .keyboard-open .topbar {
@@ -86,15 +89,18 @@ button {
 }
 
 .brand-block {
+  display: grid;
+  gap: 2px;
   min-width: 0;
+  animation: header-text-in 180ms ease-out;
 }
 
-.brand-block p,
+.brand-kicker,
 .brand-block h1 {
   margin: 0;
 }
 
-.brand-block p {
+.brand-kicker {
   color: var(--muted);
   font-size: 10px;
   font-weight: 700;
@@ -104,26 +110,31 @@ button {
 .brand-block h1 {
   overflow: hidden;
   color: var(--text);
-  font-size: 20px;
-  line-height: 1.1;
+  font-size: 19px;
+  line-height: 1.14;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .icon-button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.icon-button:active {
+  transform: scale(0.96);
 }
 
 .icon-button span {
-  font-size: 23px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -134,6 +145,8 @@ button {
 .content {
   width: min(980px, 100%);
   margin: 0 auto;
+  animation: content-in 180ms ease-out;
+  view-transition-name: content;
 }
 
 .platform-grid,
@@ -270,6 +283,37 @@ button {
   font-weight: 800;
 }
 
+.account-status-tabs,
+.service-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  width: min(360px, 100%);
+  margin: 0 auto 14px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface), transparent 4%);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.07);
+}
+
+.account-status-tabs button,
+.service-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.account-status-tabs button.selected,
+.service-tabs button.selected {
+  background: var(--text);
+  color: var(--bg);
+}
+
 .chip-button {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -329,6 +373,16 @@ button {
   font-weight: 950;
 }
 
+.account-card.is-sold .account-cover img,
+.account-card.is-sold .account-cover video {
+  filter: saturate(0.72);
+  opacity: 0.76;
+}
+
+.account-card.is-sold strong {
+  color: var(--muted);
+}
+
 .corner-badge {
   position: absolute;
   left: 10px;
@@ -346,6 +400,11 @@ button {
 .corner-badge.is-new {
   background: var(--success);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--success), transparent 65%);
+}
+
+.corner-badge.is-sold {
+  background: #676b73;
+  box-shadow: 0 8px 18px rgba(16, 17, 20, 0.22);
 }
 
 .detail-view {
@@ -449,6 +508,14 @@ button {
   font-size: 19px;
   font-weight: 950;
   box-shadow: 0 16px 30px rgba(255, 90, 31, 0.26);
+}
+
+.buy-button:disabled,
+.buy-button.is-disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+  box-shadow: none;
 }
 
 .sell-form {
@@ -679,6 +746,80 @@ button {
   opacity: 0.72;
 }
 
+.telegram-hub {
+  display: grid;
+  gap: 14px;
+}
+
+.telegram-service-card {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent), transparent 84%), transparent 62%),
+    var(--surface);
+  padding: 18px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.telegram-service-mark {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent), #000 22%));
+  color: #fff;
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--accent), transparent 66%);
+}
+
+.telegram-service-mark span {
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.telegram-service-card h2 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.telegram-service-card p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.service-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.service-actions .primary-button,
+.secondary-button {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+.secondary-button {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 950;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.05);
+}
+
 .empty-state {
   display: grid;
   gap: 12px;
@@ -741,14 +882,14 @@ button {
   position: fixed;
   left: 14px;
   right: 14px;
-  bottom: max(14px, env(safe-area-inset-bottom));
+  bottom: max(10px, env(safe-area-inset-bottom));
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 760px;
+  gap: 6px;
+  max-width: 620px;
   margin: 0 auto;
-  padding: 8px;
+  padding: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--surface), transparent 6%);
@@ -758,19 +899,24 @@ button {
 
 .bottom-nav button {
   display: grid;
-  min-height: 62px;
+  min-height: 50px;
   place-items: center;
-  gap: 2px;
+  gap: 1px;
   border: 0;
   border-radius: var(--radius);
   background: transparent;
   color: var(--muted);
+  font-size: 12px;
   font-weight: 950;
 }
 
 .bottom-nav span {
-  font-size: 25px;
+  font-size: 22px;
   line-height: 1;
+}
+
+.bottom-nav button[data-action="tab-sell"] strong {
+  color: var(--success);
 }
 
 .bottom-nav button.active {
@@ -778,11 +924,19 @@ button {
   color: #fff;
 }
 
+.bottom-nav button[data-action="tab-sell"].active {
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success), #064a30 34%));
+}
+
+.bottom-nav button.active strong {
+  color: #fff;
+}
+
 .toast {
   position: fixed;
   left: 18px;
   right: 18px;
-  bottom: calc(100px + env(safe-area-inset-bottom));
+  bottom: calc(84px + env(safe-area-inset-bottom));
   z-index: 40;
   max-width: 520px;
   margin: 0 auto;
@@ -848,6 +1002,28 @@ button {
   }
 }
 
+@keyframes header-text-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0.68;
+  }
+}
+
+@keyframes content-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0.78;
+  }
+}
+
+::view-transition-old(content),
+::view-transition-new(content),
+::view-transition-old(topbar),
+::view-transition-new(topbar) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
 @media (min-width: 760px) {
   .app-shell {
     padding-inline: 28px;
@@ -874,7 +1050,7 @@ button {
 
 @media (max-width: 380px) {
   .brand-block h1 {
-    font-size: 21px;
+    font-size: 18px;
   }
 
   .platform-grid,
@@ -888,5 +1064,18 @@ button {
 
   .detail-price {
     font-size: 29px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-block,
+  .content,
+  .platform-card,
+  .account-card,
+  .skeleton-card i,
+  .skeleton-card span,
+  .skeleton-card b,
+  .toast {
+    animation: none;
   }
 }
