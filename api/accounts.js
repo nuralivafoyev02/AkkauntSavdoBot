@@ -5,7 +5,9 @@ import {
   parsePriceUz,
   publicAccount,
   readJson,
+  requireAdmin,
   requireTelegramUser,
+  resolveAdminRole,
   sendError,
   sendJson
 } from './_shared.js';
@@ -14,7 +16,7 @@ import { parseMobileLegendsId } from './account-lookup.js';
 
 const MAX_MEDIA_ITEMS = 10;
 const LISTING_TYPES = new Set(['nft', 'username']);
-const ACCOUNT_SELECT_BASE = 'id,platform_slug,title,description,price_uzs,status,is_top,media,created_at,seller_username,seller_name';
+const ACCOUNT_SELECT_BASE = 'id,platform_slug,title,description,price_uzs,status,is_top,media,created_at,sold_at,seller_tg_id,seller_username,seller_name';
 const ACCOUNT_SELECT_META = `${ACCOUNT_SELECT_BASE},account_game_id,account_server_id,account_nickname,account_region,listing_type`;
 
 function cleanText(value, maxLength) {
@@ -77,15 +79,40 @@ async function listAccounts(req, res) {
   const platform = url.searchParams.get('platform');
   const id = url.searchParams.get('id');
   const statusParam = url.searchParams.get('status');
-  const status = ['available', 'sold'].includes(statusParam) ? statusParam : 'available';
+  const status = ['available', 'sold', 'all'].includes(statusParam) ? statusParam : 'available';
+  const scope = ['mine', 'admin'].includes(url.searchParams.get('scope')) ? url.searchParams.get('scope') : '';
   const listingType = normalizeListingType(url.searchParams.get('listingType') || url.searchParams.get('listing_type'));
-
   const supabase = await getSupabase();
+  let viewer = null;
+  let role = { isAdmin: false, isSuperAdmin: false, role: 'user' };
+
+  if (scope === 'mine') {
+    viewer = requireTelegramUser(req);
+  } else if (scope === 'admin') {
+    ({ user: viewer, role } = await requireAdmin(req));
+  } else {
+    try {
+      viewer = requireTelegramUser(req);
+      role = await resolveAdminRole(viewer, supabase);
+    } catch {
+      viewer = null;
+    }
+  }
+
+  const includeSeller = role.isAdmin;
+
   if (!supabase) {
-    let accounts = mockAccounts.map(publicAccount);
-    if (platform) accounts = accounts.filter((account) => account.platform_slug === platform);
-    if (id) accounts = accounts.filter((account) => account.id === id);
-    accounts = accounts.filter((account) => account.status === status);
+    let rawAccounts = [...mockAccounts];
+    if (platform) rawAccounts = rawAccounts.filter((account) => account.platform_slug === platform);
+    if (id) rawAccounts = rawAccounts.filter((account) => account.id === id);
+    if (status !== 'all') rawAccounts = rawAccounts.filter((account) => account.status === status);
+    if (scope === 'mine') {
+      rawAccounts = rawAccounts.filter((account) => {
+        const username = String(account.seller_username || '').replace(/^@/, '').toLowerCase();
+        return Number(account.seller_tg_id ?? -1) === Number(viewer?.id ?? -2) || username === String(viewer?.username || '').toLowerCase();
+      });
+    }
+    let accounts = rawAccounts.map((account) => publicAccount(account, { includeSeller }));
     if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
 
     sendJson(res, 200, {
@@ -99,13 +126,14 @@ async function listAccounts(req, res) {
     let query = supabase
       .from('accounts')
       .select(select)
-      .eq('status', status)
       .order('is_top', { ascending: false })
       .order('created_at', { ascending: false });
 
+    if (status !== 'all') query = query.eq('status', status);
     if (platform) query = query.eq('platform_slug', platform);
     if (id) query = query.eq('id', id);
     if (listingType) query = query.eq('listing_type', listingType);
+    if (scope === 'mine' && viewer?.id) query = query.eq('seller_tg_id', viewer.id);
     return query;
   }
 
@@ -115,12 +143,13 @@ async function listAccounts(req, res) {
       let query = supabase
         .from('accounts')
         .select(select)
-        .eq('status', status)
         .order('is_top', { ascending: false })
         .order('created_at', { ascending: false });
 
+      if (status !== 'all') query = query.eq('status', status);
       if (platform) query = query.eq('platform_slug', platform);
       if (id) query = query.eq('id', id);
+      if (scope === 'mine' && viewer?.id) query = query.eq('seller_tg_id', viewer.id);
       return query;
     }
 
@@ -129,7 +158,7 @@ async function listAccounts(req, res) {
 
   if (error) throw error;
 
-  let accounts = (data || []).map(publicAccount);
+  let accounts = (data || []).map((account) => publicAccount(account, { includeSeller }));
   if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
 
   sendJson(res, 200, {
@@ -209,6 +238,8 @@ async function createAccount(req, res) {
   }
 
   const supabase = await getSupabase();
+  const creatorRole = await resolveAdminRole(user, supabase);
+  const includeSellerForCreator = creatorRole.isAdmin;
   if (!supabase) {
     const created = publicAccount({
       id: `local-${Date.now()}`,
@@ -227,7 +258,7 @@ async function createAccount(req, res) {
       is_top: false,
       media,
       created_at: new Date().toISOString()
-    });
+    }, { includeSeller: includeSellerForCreator });
 
     sendJson(res, 201, {
       demo: true,
@@ -294,7 +325,7 @@ async function createAccount(req, res) {
 
   sendJson(res, 201, {
     demo: false,
-    account: publicAccount(data)
+    account: publicAccount(data, { includeSeller: includeSellerForCreator })
   });
 }
 

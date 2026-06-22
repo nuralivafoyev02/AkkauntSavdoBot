@@ -1,6 +1,7 @@
 import {
   getBaseUrl,
   getSupabase,
+  isSuperAdminUser,
   normalizeUsername,
   readJson,
   requireSupabase,
@@ -65,11 +66,44 @@ function getMiniAppUrl(req) {
   return (process.env.WEBAPP_URL || getBaseUrl(req)).replace(/\/$/, '');
 }
 
-function isAdmin(from) {
+function isEnvAdmin(from) {
+  if (isSuperAdminUser(from)) return true;
+
   const adminId = process.env.ADMIN_TELEGRAM_ID;
   if (adminId) return String(from?.id || '') === String(adminId);
 
   return normalizeUsername(from?.username) === normalizeUsername(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME);
+}
+
+async function isAdmin(from) {
+  if (isEnvAdmin(from)) return true;
+
+  const supabase = await getSupabase();
+  if (!supabase) return false;
+
+  const username = normalizeUsername(from?.username);
+  const checks = [];
+  if (from?.id) checks.push(['tg_user_id', from.id]);
+  if (username) checks.push(['username', username]);
+
+  for (const [column, value] of checks) {
+    const { data, error } = await supabase
+      .from('app_admins')
+      .select('id')
+      .eq(column, value)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingRelationError(error)) return false;
+      throw error;
+    }
+
+    if (data) return true;
+  }
+
+  return false;
 }
 
 function greetingPayload(chatId, req) {
@@ -271,7 +305,9 @@ async function handleMessage(message, req, backgroundTasks = []) {
     });
   }
 
-  if (broadcastText !== null && isAdmin(message.from)) {
+  const senderIsAdmin = await isAdmin(message.from);
+
+  if (broadcastText !== null && senderIsAdmin) {
     if (!broadcastText) {
       await telegram('sendMessage', {
         chat_id: chatId,
@@ -306,7 +342,7 @@ async function handleMessage(message, req, backgroundTasks = []) {
     return;
   }
 
-  if (soldMatch && isAdmin(message.from)) {
+  if (soldMatch && senderIsAdmin) {
     const title = soldMatch[1].trim();
     const sold = await markSoldByTitle(title);
     await telegram('sendMessage', {

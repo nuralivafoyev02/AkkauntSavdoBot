@@ -65,6 +65,18 @@ create table if not exists public.bot_users (
   last_error_at timestamptz
 );
 
+create table if not exists public.app_admins (
+  id uuid primary key default gen_random_uuid(),
+  tg_user_id bigint unique,
+  username text unique,
+  role text not null default 'admin' check (role in ('admin', 'superadmin')),
+  is_active boolean not null default true,
+  added_by_tg_id bigint,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (tg_user_id is not null or username is not null)
+);
+
 create index if not exists accounts_platform_status_created_idx
   on public.accounts (platform_slug, status, created_at desc);
 
@@ -82,6 +94,9 @@ create index if not exists accounts_game_id_idx
 create index if not exists bot_users_active_last_seen_idx
   on public.bot_users (is_active, last_seen_at desc);
 
+create index if not exists app_admins_active_role_idx
+  on public.app_admins (is_active, role);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -98,14 +113,22 @@ before update on public.accounts
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists app_admins_set_updated_at on public.app_admins;
+create trigger app_admins_set_updated_at
+before update on public.app_admins
+for each row
+execute function public.set_updated_at();
+
 alter table public.platforms enable row level security;
 alter table public.accounts enable row level security;
 alter table public.bot_users enable row level security;
+alter table public.app_admins enable row level security;
 
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.platforms to service_role;
 grant select, insert, update, delete on public.accounts to service_role;
 grant select, insert, update, delete on public.bot_users to service_role;
+grant select, insert, update, delete on public.app_admins to service_role;
 grant execute on function public.set_updated_at() to service_role;
 
 insert into public.platforms (slug, title, subtitle, accent_color, sort_order) values

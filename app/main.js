@@ -4,13 +4,25 @@ const app = document.querySelector('#app');
 const tg = window.Telegram?.WebApp;
 
 const state = {
-  tab: 'store',
+  tab: 'home',
   route: 'platforms',
   loading: true,
   error: '',
   demo: false,
+  me: null,
   platforms: [],
   accounts: [],
+  history: {
+    loading: false,
+    error: '',
+    filter: 'all',
+    accounts: []
+  },
+  admins: {
+    loading: false,
+    error: '',
+    items: []
+  },
   telegramListings: {
     nft: [],
     username: []
@@ -187,6 +199,34 @@ async function loadConfig() {
   }
 }
 
+function isAdmin() {
+  return Boolean(state.me?.role?.isAdmin);
+}
+
+function isSuperAdmin() {
+  return Boolean(state.me?.role?.isSuperAdmin);
+}
+
+async function loadMe() {
+  try {
+    state.me = await api('/api/me');
+  } catch {
+    state.me = {
+      user: {
+        id: null,
+        username: '',
+        display_name: 'Foydalanuvchi',
+        photo_url: ''
+      },
+      role: {
+        isAdmin: false,
+        isSuperAdmin: false,
+        role: 'user'
+      }
+    };
+  }
+}
+
 async function loadPlatforms() {
   state.loading = true;
   state.error = '';
@@ -260,6 +300,44 @@ async function loadTelegramListings(section = state.telegramSection) {
   }
 }
 
+async function loadHistory() {
+  state.history.loading = true;
+  state.history.error = '';
+  render();
+
+  try {
+    const params = new URLSearchParams({
+      scope: isAdmin() ? 'admin' : 'mine',
+      status: 'all'
+    });
+    const payload = await api(`/api/accounts?${params.toString()}`);
+    state.history.accounts = payload.accounts || [];
+    state.demo = Boolean(payload.demo);
+  } catch (error) {
+    state.history.error = error.message;
+  } finally {
+    state.history.loading = false;
+    render();
+  }
+}
+
+async function loadAdmins() {
+  if (!isSuperAdmin()) return;
+  state.admins.loading = true;
+  state.admins.error = '';
+  render();
+
+  try {
+    const payload = await api('/api/admins');
+    state.admins.items = payload.admins || [];
+  } catch (error) {
+    state.admins.error = error.message;
+  } finally {
+    state.admins.loading = false;
+    render();
+  }
+}
+
 function showToast(message) {
   let toast = document.querySelector('.toast');
   if (!toast) {
@@ -278,19 +356,28 @@ function showToast(message) {
 
 function headerTitle() {
   if (state.route === 'sell') return 'Akkaunt sotish';
+  if (state.route === 'history') return 'Tarix';
+  if (state.route === 'profile') return 'Profil';
+  if (state.route === 'admin') return 'Admin panel';
   if (state.route === 'detail') return state.selectedAccount?.title || 'Akkaunt';
   if (state.route === 'telegram') return state.selectedPlatform?.title || 'Telegram';
   if (state.route === 'accounts') return state.selectedPlatform?.title || 'Akkauntlar';
-  return "Akkauntlar do'koni";
+  return 'Bosh menu';
 }
 
 function renderHeader() {
-  const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram';
+  const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram' || state.route === 'admin';
   const subtitle =
     state.route === 'platforms'
-      ? 'Platformani tanlang'
+      ? 'Barcha platformalar'
       : state.route === 'sell'
         ? 'Sotuvchi paneli'
+        : state.route === 'history'
+          ? isAdmin() ? 'Barcha userlar amallari' : 'Sizning e\'lonlaringiz'
+          : state.route === 'profile'
+            ? 'Shaxsiy profil'
+            : state.route === 'admin'
+              ? isSuperAdmin() ? 'Adminlarni boshqarish' : 'Yopiq bo\'lim'
         : state.route === 'detail'
           ? 'Akkaunt tafsiloti'
           : state.route === 'telegram'
@@ -302,16 +389,20 @@ function renderHeader() {
   return `
     <header class="topbar" data-route="${escapeHtml(state.route)}">
       <button class="icon-button ${canGoBack ? '' : 'is-hidden'}" type="button" data-action="back" aria-label="Orqaga">
-        <span aria-hidden="true">‹</span>
+        <span aria-hidden="true">×</span>
       </button>
-      <div class="brand-block">
-        <span class="brand-kicker">${escapeHtml(subtitle)}</span>
-        <h1>${escapeHtml(headerTitle())}</h1>
+      <div class="app-chip">
+        <span aria-hidden="true">$</span>
+        <strong>Geto Savdo</strong>
       </div>
       <button class="icon-button" type="button" data-action="refresh" aria-label="Yangilash">
-        <span aria-hidden="true">↻</span>
+        <span aria-hidden="true">•••</span>
       </button>
     </header>
+    <section class="screen-heading">
+      <span>${escapeHtml(subtitle)}</span>
+      <h1>${escapeHtml(headerTitle())}</h1>
+    </section>
   `;
 }
 
@@ -491,6 +582,25 @@ function buyText(account) {
   return `Assalomu alaykum, "${account.title}" akkauntingizni @${state.config.botUsername} da ko'rdim sotib olmoqchiman garant @${state.config.adminUsername}`;
 }
 
+function renderSellerInfo(account) {
+  if (!isAdmin()) return '';
+  const bits = [
+    account.seller_name ? `Ism: ${account.seller_name}` : '',
+    account.seller_username ? `@${String(account.seller_username).replace(/^@/, '')}` : '',
+    account.seller_tg_id ? `ID ${account.seller_tg_id}` : ''
+  ].filter(Boolean);
+
+  if (!bits.length) return '';
+
+  return `
+    <section class="seller-panel">
+      <span>Admin uchun</span>
+      <strong>Sotuvchi</strong>
+      <p>${escapeHtml(bits.join(' · '))}</p>
+    </section>
+  `;
+}
+
 function renderDetail() {
   const account = state.selectedAccount;
   if (!account) return renderError("Akkaunt topilmadi.");
@@ -518,6 +628,7 @@ function renderDetail() {
             : ''
         }
         <p>${escapeHtml(account.description).replace(/\n/g, '<br />')}</p>
+        ${renderSellerInfo(account)}
       </section>
 
       <button class="buy-button ${isSold ? 'is-disabled' : ''}" type="button" data-action="${isSold ? '' : 'buy-account'}" ${isSold ? 'disabled' : ''}>${isSold ? 'Sotilgan' : 'Sotib olish'}</button>
@@ -749,6 +860,7 @@ function renderTelegramImageField(activeKey = state.telegramSection) {
 
 function renderTelegramListingCard(listing, section) {
   const seller = listing.seller_username ? `@${String(listing.seller_username).replace(/^@/, '')}` : listing.seller_name || 'Sotuvchi';
+  const sellerLine = isAdmin() ? seller : 'Sotuvchi himoyalangan';
   const media = firstMedia(listing);
   const mediaUrl = media?.type === 'image' && media.url ? optimizedImageUrl(media.url, 180, 70) : '';
 
@@ -764,7 +876,7 @@ function renderTelegramListingCard(listing, section) {
       <div class="telegram-listing-main">
         <span>${escapeHtml(section.label)}</span>
         <strong>${escapeHtml(listing.title)}</strong>
-        <small>${escapeHtml(seller)}</small>
+        <small>${escapeHtml(sellerLine)}</small>
       </div>
       <div class="telegram-listing-side">
         <b>${formatPrice(listing.price_uzs)}</b>
@@ -774,16 +886,199 @@ function renderTelegramListingCard(listing, section) {
   `;
 }
 
+function filteredHistoryAccounts() {
+  if (state.history.filter === 'sold') return state.history.accounts.filter((account) => account.status === 'sold');
+  if (state.history.filter === 'available') return state.history.accounts.filter((account) => account.status === 'available');
+  return state.history.accounts;
+}
+
+function renderHistory() {
+  const accounts = filteredHistoryAccounts();
+  const totalSold = state.history.accounts.filter((account) => account.status === 'sold').length;
+  const totalAvailable = state.history.accounts.filter((account) => account.status === 'available').length;
+
+  return `
+    <section class="history-view">
+      <section class="stat-panel">
+        <span>${isAdmin() ? 'Admin tarixi' : 'Mening tarixim'}</span>
+        <strong>${state.history.accounts.length} ta amal</strong>
+        <div>
+          <small>Sotuvda ${totalAvailable}</small>
+          <small>Sotilgan ${totalSold}</small>
+        </div>
+      </section>
+
+      <section class="pill-tabs" aria-label="Tarix filterlari">
+        <button class="${state.history.filter === 'all' ? 'selected' : ''}" type="button" data-action="set-history-filter" data-filter="all">Barchasi</button>
+        <button class="${state.history.filter === 'available' ? 'selected' : ''}" type="button" data-action="set-history-filter" data-filter="available">Sotuvda</button>
+        <button class="${state.history.filter === 'sold' ? 'selected' : ''}" type="button" data-action="set-history-filter" data-filter="sold">Sotilgan</button>
+      </section>
+
+      ${
+        state.history.loading
+          ? renderSkeletonGrid('account')
+          : state.history.error
+            ? renderError(state.history.error)
+            : accounts.length
+              ? `<section class="history-list">${accounts.map((account) => renderHistoryItem(account)).join('')}</section>`
+              : `<div class="empty-state compact"><strong>Tarix bo'sh</strong><p>${isAdmin() ? 'Hali userlar amali topilmadi.' : "Sotuvga qo'ygan yoki sotilgan akkauntingiz hali yo'q."}</p></div>`
+      }
+    </section>
+  `;
+}
+
+function renderHistoryItem(account) {
+  const date = new Date(account.sold_at || account.created_at).toLocaleDateString('uz-UZ');
+  const seller = isAdmin() && (account.seller_username || account.seller_name)
+    ? `<small>${escapeHtml(account.seller_username ? `@${account.seller_username}` : account.seller_name)}</small>`
+    : '';
+
+  return `
+    <button class="history-item" type="button" data-action="open-history-account" data-id="${escapeHtml(account.id)}">
+      <span class="history-icon ${account.status === 'sold' ? 'is-sold' : ''}" aria-hidden="true">${account.status === 'sold' ? '↘' : '↗'}</span>
+      <span>
+        <strong>${escapeHtml(account.title)}</strong>
+        <small>${date} · ${account.status === 'sold' ? 'Sotilgan' : 'Sotuvda'}</small>
+        ${seller}
+      </span>
+      <b>${formatPrice(account.price_uzs)}</b>
+    </button>
+  `;
+}
+
+function userInitial() {
+  return initials(state.me?.user?.display_name || state.me?.user?.username || 'U').slice(0, 1);
+}
+
+function renderAvatar(sizeClass = '') {
+  const user = state.me?.user || {};
+  if (user.photo_url) {
+    return `<img class="profile-avatar ${sizeClass}" src="${escapeHtml(user.photo_url)}" alt="${escapeHtml(user.display_name || 'Profil')}" />`;
+  }
+  return `<span class="profile-avatar ${sizeClass}" aria-hidden="true">${escapeHtml(userInitial())}</span>`;
+}
+
+function renderProfile() {
+  const user = state.me?.user || {};
+  const username = user.username ? `@${user.username}` : 'username yo\'q';
+  const roleLabel = isSuperAdmin() ? 'Superadmin' : isAdmin() ? 'Admin' : 'User';
+
+  return `
+    <section class="profile-view">
+      <section class="profile-hero">
+        ${renderAvatar('is-large')}
+        <h2>${escapeHtml(user.display_name || 'Foydalanuvchi')}</h2>
+        <p>${escapeHtml(username)}${user.id ? ` · ID ${escapeHtml(user.id)}` : ''}</p>
+        <span>${escapeHtml(roleLabel)}</span>
+      </section>
+
+      <section class="settings-list">
+        <button class="settings-row is-disabled" type="button" disabled>
+          <span aria-hidden="true">◇</span>
+          <strong>Obuna holati</strong>
+          <small>Premium imkoniyatlar</small>
+          <em>Tez kunda</em>
+        </button>
+        <button class="settings-row" type="button" data-action="tab-history">
+          <span aria-hidden="true">◴</span>
+          <strong>${isAdmin() ? 'Barcha amallar tarixi' : 'Mening e\'lonlarim'}</strong>
+          <small>${isAdmin() ? 'Userlar e\'lonlari va savdolari' : 'Sotuvga qo\'ygan va sotgan akkauntlar'}</small>
+          <i aria-hidden="true">›</i>
+        </button>
+        ${
+          isAdmin()
+            ? `<button class="settings-row is-admin" type="button" data-action="open-admin">
+                <span aria-hidden="true">⚙</span>
+                <strong>Admin panel</strong>
+                <small>${isSuperAdmin() ? 'Admin qo\'shish va boshqarish' : 'Yopiq admin bo\'lim'}</small>
+                <i aria-hidden="true">›</i>
+              </button>`
+            : ''
+        }
+      </section>
+    </section>
+  `;
+}
+
+function renderAdminPanel() {
+  if (!isAdmin()) {
+    return `<div class="empty-state"><strong>Ruxsat yo'q</strong><p>Bu bo'lim faqat adminlar uchun.</p></div>`;
+  }
+
+  return `
+    <section class="admin-view">
+      <section class="stat-panel admin">
+        <span>${isSuperAdmin() ? 'Superadmin' : 'Admin'}</span>
+        <strong>${isSuperAdmin() ? 'Adminlarni boshqarish' : 'Admin rejimi'}</strong>
+        <div>
+          <small>Seller info ko'rinadi</small>
+          <small>Tarix: barcha userlar</small>
+        </div>
+      </section>
+
+      ${
+        isSuperAdmin()
+          ? `<form class="admin-form" id="adminForm">
+              <label>
+                <span>Telegram ID</span>
+                <input name="tgUserId" inputmode="numeric" placeholder="8032495342" />
+              </label>
+              <label>
+                <span>Username</span>
+                <input name="username" placeholder="@username" autocomplete="off" />
+              </label>
+              <button class="primary-button" type="submit">Admin qo'shish</button>
+              <p class="form-status" id="adminFormStatus"></p>
+            </form>
+
+            <section class="admin-list">
+              ${
+                state.admins.loading
+                  ? renderSkeletonGrid('account')
+                  : state.admins.error
+                    ? renderError(state.admins.error)
+                    : state.admins.items.map((admin) => renderAdminItem(admin)).join('')
+              }
+            </section>`
+          : `<div class="empty-state compact"><strong>Admin panel</strong><p>Superadmin adminlarni qo'shadi yoki o'chiradi. Sizga barcha userlar tarixi ko'rinadi.</p></div>`
+      }
+    </section>
+  `;
+}
+
+function renderAdminItem(admin) {
+  const title = admin.username ? `@${admin.username}` : `ID ${admin.tg_user_id}`;
+  const removable = admin.source !== 'env' && admin.role !== 'superadmin';
+  return `
+    <article class="admin-item">
+      <span aria-hidden="true">${admin.role === 'superadmin' ? '★' : '•'}</span>
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(admin.role)} · ${admin.source === 'env' ? 'Vercel env' : 'database'}</small>
+      </div>
+      ${removable ? `<button type="button" data-action="delete-admin" data-id="${escapeHtml(admin.id)}">O'chirish</button>` : '<em>Asosiy</em>'}
+    </article>
+  `;
+}
+
 function renderBottomNav() {
   return `
     <nav class="bottom-nav" aria-label="Asosiy">
-      <button class="${state.tab === 'store' ? 'active' : ''}" type="button" data-action="tab-store">
-        <span aria-hidden="true">⌂</span>
-        <strong>Do'kon</strong>
+      <button class="${state.tab === 'home' ? 'active' : ''}" type="button" data-action="tab-store">
+        <span aria-hidden="true">▦</span>
+        <strong>Bosh</strong>
       </button>
-      <button class="${state.tab === 'sell' ? 'active' : ''}" type="button" data-action="tab-sell">
-        <span aria-hidden="true">⇧</span>
-        <strong>Sotish</strong>
+      <button class="nav-add ${state.tab === 'sell' ? 'active' : ''}" type="button" data-action="tab-sell" aria-label="Qo'shish">
+        <span aria-hidden="true">+</span>
+        <strong>Qo'shish</strong>
+      </button>
+      <button class="${state.tab === 'history' ? 'active' : ''}" type="button" data-action="tab-history">
+        <span aria-hidden="true">◷</span>
+        <strong>Tarix</strong>
+      </button>
+      <button class="${state.tab === 'profile' ? 'active' : ''}" type="button" data-action="tab-profile">
+        <span aria-hidden="true">♙</span>
+        <strong>Profil</strong>
       </button>
     </nav>
   `;
@@ -807,6 +1102,9 @@ function renderLightbox() {
 
 function currentContent() {
   if (state.route === 'sell') return renderSell();
+  if (state.route === 'history') return renderHistory();
+  if (state.route === 'profile') return renderProfile();
+  if (state.route === 'admin') return renderAdminPanel();
   if (state.route === 'telegram') return renderTelegramServices();
   if (state.route === 'accounts') return renderAccounts();
   if (state.route === 'detail') return renderDetail();
@@ -831,7 +1129,12 @@ function findPlatform(slug) {
 }
 
 function findAccount(id) {
-  return state.accounts.find((account) => account.id === id) || null;
+  return (
+    state.accounts.find((account) => account.id === id) ||
+    state.history.accounts.find((account) => account.id === id) ||
+    Object.values(state.telegramListings).flat().find((account) => account.id === id) ||
+    null
+  );
 }
 
 async function openPlatform(slug) {
@@ -846,7 +1149,7 @@ async function openPlatform(slug) {
       state.selectedAccount = null;
       state.accounts = [];
       state.route = 'telegram';
-      state.tab = 'store';
+      state.tab = 'home';
       state.loading = false;
       state.telegramFormOpen = false;
       render();
@@ -858,7 +1161,7 @@ async function openPlatform(slug) {
   withRenderTransition(() => {
     state.selectedPlatform = platform;
     state.route = 'accounts';
-    state.tab = 'store';
+    state.tab = 'home';
     state.accountStatus = 'available';
     state.accounts = [];
     state.loading = true;
@@ -874,7 +1177,6 @@ function openAccount(id) {
   withRenderTransition(() => {
     state.selectedAccount = account;
     state.route = 'detail';
-    state.tab = 'store';
     render();
   });
 }
@@ -882,7 +1184,7 @@ function openAccount(id) {
 function goBack() {
   if (state.route === 'detail') {
     withRenderTransition(() => {
-      state.route = 'accounts';
+      state.route = state.selectedPlatform ? 'accounts' : 'history';
       state.selectedAccount = null;
       render();
     });
@@ -911,6 +1213,14 @@ function goBack() {
       render();
     });
   }
+
+  if (state.route === 'admin') {
+    withRenderTransition(() => {
+      state.route = 'profile';
+      state.tab = 'profile';
+      render();
+    });
+  }
 }
 
 async function refreshCurrent() {
@@ -921,6 +1231,22 @@ async function refreshCurrent() {
 
   if (state.route === 'telegram') {
     await loadTelegramListings(state.telegramSection);
+    return;
+  }
+
+  if (state.route === 'history') {
+    await loadHistory();
+    return;
+  }
+
+  if (state.route === 'profile') {
+    await loadMe();
+    render();
+    return;
+  }
+
+  if (state.route === 'admin') {
+    await loadAdmins();
     return;
   }
 
@@ -940,7 +1266,14 @@ function switchTab(tab) {
     clearTelegramListingImage();
     cancelAccountLoads();
     state.tab = tab;
-    state.route = tab === 'sell' ? 'sell' : 'platforms';
+    state.route =
+      tab === 'sell'
+        ? 'sell'
+        : tab === 'history'
+          ? 'history'
+          : tab === 'profile'
+            ? 'profile'
+            : 'platforms';
     state.selectedAccount = null;
     state.selectedPlatform = null;
     state.saleDraft.platformSlug = isServicePlatform(platformSlug) ? 'mobile-legends' : platformSlug;
@@ -950,6 +1283,9 @@ function switchTab(tab) {
     state.loading = false;
     render();
   });
+
+  if (tab === 'history') loadHistory();
+  if (tab === 'profile') loadMe().then(() => render());
 }
 
 async function setAccountStatus(status) {
@@ -1328,7 +1664,7 @@ async function submitSale(event) {
       state.selectedAccount = payload.account;
       state.accounts = [payload.account, ...state.accounts];
       state.route = 'detail';
-      state.tab = 'store';
+      state.tab = 'home';
       render();
     });
   } catch (error) {
@@ -1387,6 +1723,50 @@ async function submitTelegramListing(event) {
     render();
   } catch (error) {
     setTelegramFormBusy(false, '');
+    showToast(error.message);
+  }
+}
+
+async function submitAdmin(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.('#adminForm');
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const formData = new FormData(form);
+  const status = form.querySelector('#adminFormStatus');
+  const button = form.querySelector('button[type="submit"]');
+
+  try {
+    button.disabled = true;
+    status.textContent = 'Admin qo\'shilmoqda...';
+    await api('/api/admins', {
+      method: 'POST',
+      body: {
+        tgUserId: formData.get('tgUserId'),
+        username: formData.get('username')
+      }
+    });
+    form.reset();
+    showToast('Admin qo\'shildi.');
+    await loadAdmins();
+  } catch (error) {
+    status.textContent = '';
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function deleteAdmin(id) {
+  if (!id) return;
+  try {
+    await api(`/api/admins?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    state.admins.items = state.admins.items.filter((admin) => admin.id !== id);
+    showToast('Admin o\'chirildi.');
+    render();
+  } catch (error) {
     showToast(error.message);
   }
 }
@@ -1453,10 +1833,16 @@ function openTelegramProfile(username) {
   }, 450);
 }
 
-function handleTelegramListingBuy(id) {
+async function handleTelegramListingBuy(id) {
   const listing = findTelegramListing(id);
   if (!listing) return;
-  openTelegramProfile(listing.seller_username);
+
+  try {
+    const contact = await api(`/api/seller-contact?id=${encodeURIComponent(id)}`);
+    openTelegramProfile(contact.username);
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function openPreview(index) {
@@ -1479,22 +1865,38 @@ app.addEventListener('click', async (event) => {
 
   if (action === 'open-platform') await openPlatform(control.dataset.slug);
   if (action === 'open-account') openAccount(control.dataset.id);
+  if (action === 'open-history-account') openAccount(control.dataset.id);
   if (action === 'set-account-status') await setAccountStatus(control.dataset.status);
+  if (action === 'set-history-filter') {
+    state.history.filter = control.dataset.filter || 'all';
+    render();
+  }
   if (action === 'set-telegram-section') setTelegramSection(control.dataset.section);
   if (action === 'toggle-telegram-form') toggleTelegramForm();
+  if (action === 'open-admin') {
+    withRenderTransition(() => {
+      state.route = 'admin';
+      state.tab = 'profile';
+      render();
+    });
+    await loadAdmins();
+  }
   if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
   if (action === 'lookup-account') await lookupAccount();
   if (action === 'back') goBack();
   if (action === 'refresh') await refreshCurrent();
-  if (action === 'tab-store') switchTab('store');
+  if (action === 'tab-store') switchTab('home');
   if (action === 'tab-sell') switchTab('sell');
+  if (action === 'tab-history') switchTab('history');
+  if (action === 'tab-profile') switchTab('profile');
+  if (action === 'delete-admin') await deleteAdmin(control.dataset.id);
   if (action === 'remove-file') removePendingFile(control.dataset.id);
   if (action === 'remove-telegram-image') {
     clearTelegramListingImage();
     renderTelegramImagePreview();
   }
   if (action === 'buy-account') await handleBuy();
-  if (action === 'buy-telegram-listing') handleTelegramListingBuy(control.dataset.id);
+  if (action === 'buy-telegram-listing') await handleTelegramListingBuy(control.dataset.id);
   if (action === 'preview-media') openPreview(control.dataset.index);
   if (action === 'close-lightbox') {
     state.lightbox = null;
@@ -1526,6 +1928,10 @@ app.addEventListener('submit', (event) => {
   if (event.target.id === 'telegramListingForm') {
     submitTelegramListing(event);
   }
+
+  if (event.target.id === 'adminForm') {
+    submitAdmin(event);
+  }
 });
 
 window.addEventListener('beforeunload', () => {
@@ -1551,4 +1957,4 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', set
 
 setTelegramChrome();
 render();
-await Promise.all([loadConfig(), loadPlatforms()]);
+await Promise.all([loadConfig(), loadMe(), loadPlatforms()]);

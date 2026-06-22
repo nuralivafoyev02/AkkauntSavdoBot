@@ -94,14 +94,13 @@ export function parsePriceUz(input) {
   return Number(digits);
 }
 
-export function publicAccount(row) {
+export function publicAccount(row, options = {}) {
   const createdAt = row.created_at || new Date().toISOString();
   const rawDescription = row.description || '';
   const markerMatch = String(rawDescription).match(LISTING_TYPE_MARKER);
   const listingType = row.listing_type || markerMatch?.[1] || null;
   const description = markerMatch ? String(rawDescription).replace(LISTING_TYPE_MARKER, '') : rawDescription;
-
-  return {
+  const account = {
     id: row.id,
     platform_slug: row.platform_slug,
     title: row.title,
@@ -111,15 +110,22 @@ export function publicAccount(row) {
     account_server_id: row.account_server_id || null,
     account_nickname: row.account_nickname || null,
     account_region: row.account_region || null,
-    seller_username: row.seller_username || null,
-    seller_name: row.seller_name || null,
     price_uzs: Number(row.price_uzs || 0),
     status: row.status,
     is_top: Boolean(row.is_top),
     is_new: Date.now() - new Date(createdAt).getTime() <= THREE_DAYS_MS,
     media: Array.isArray(row.media) ? row.media : [],
+    sold_at: row.sold_at || null,
     created_at: createdAt
   };
+
+  if (options.includeSeller) {
+    account.seller_tg_id = row.seller_tg_id ?? null;
+    account.seller_username = row.seller_username || null;
+    account.seller_name = row.seller_name || null;
+  }
+
+  return account;
 }
 
 export function verifyTelegramInitData(initData, botToken, maxAgeSeconds = 24 * 60 * 60) {
@@ -200,4 +206,110 @@ export function mediaKind(contentType) {
   if (String(contentType).startsWith('image/')) return 'image';
   if (String(contentType).startsWith('video/')) return 'video';
   return null;
+}
+
+export function envList(name) {
+  return String(process.env[name] || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function isLocalDevUser(user) {
+  return Number(user?.id ?? -1) === 0 && normalizeUsername(user?.username) === 'local_dev';
+}
+
+export function isSuperAdminUser(user) {
+  const ids = new Set([
+    ...envList('ADMIN_TELEGRAM_IDS'),
+    ...envList('SUPERADMIN_TELEGRAM_IDS'),
+    process.env.ADMIN_TELEGRAM_ID,
+    process.env.SUPERADMIN_TELEGRAM_ID
+  ].filter(Boolean).map(String));
+
+  const usernames = new Set([
+    ...envList('ADMIN_USERNAMES'),
+    ...envList('SUPERADMIN_USERNAMES'),
+    process.env.ADMIN_USERNAME,
+    process.env.SUPERADMIN_USERNAME
+  ].filter(Boolean).map(normalizeUsername));
+
+  const userId = String(user?.id || '');
+  const username = normalizeUsername(user?.username);
+  if (ids.has(userId)) return true;
+  if (username && usernames.has(username)) return true;
+
+  const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+  return !isProduction && !process.env.BOT_TOKEN && isLocalDevUser(user);
+}
+
+function isMissingAdminTable(error) {
+  return error?.code === '42P01' || /relation .*app_admins.* does not exist/i.test(error?.message || '');
+}
+
+export async function resolveAdminRole(user, supabase) {
+  if (isSuperAdminUser(user)) {
+    return {
+      isAdmin: true,
+      isSuperAdmin: true,
+      role: 'superadmin'
+    };
+  }
+
+  if (!supabase || !user) {
+    return {
+      isAdmin: false,
+      isSuperAdmin: false,
+      role: 'user'
+    };
+  }
+
+  const username = normalizeUsername(user.username);
+  const checks = [];
+  if (user.id) checks.push(['tg_user_id', user.id]);
+  if (username) checks.push(['username', username]);
+
+  for (const [column, value] of checks) {
+    const { data, error } = await supabase
+      .from('app_admins')
+      .select('role,is_active')
+      .eq(column, value)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingAdminTable(error)) break;
+      throw error;
+    }
+
+    if (data) {
+      const isSuperAdmin = data.role === 'superadmin';
+      return {
+        isAdmin: true,
+        isSuperAdmin,
+        role: isSuperAdmin ? 'superadmin' : 'admin'
+      };
+    }
+  }
+
+  return {
+    isAdmin: false,
+    isSuperAdmin: false,
+    role: 'user'
+  };
+}
+
+export async function requireAdmin(req, options = {}) {
+  const user = requireTelegramUser(req);
+  const supabase = await getSupabase();
+  const role = await resolveAdminRole(user, supabase);
+
+  if (!role.isAdmin || (options.superAdmin && !role.isSuperAdmin)) {
+    const error = new Error(options.superAdmin ? 'Faqat superadmin uchun ruxsat berilgan.' : 'Faqat adminlar uchun ruxsat berilgan.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return { user, role, supabase };
 }
