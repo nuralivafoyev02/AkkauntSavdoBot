@@ -23,6 +23,13 @@ const state = {
     error: '',
     items: []
   },
+  adminPlatforms: {
+    loading: false,
+    error: '',
+    items: []
+  },
+  profileEditorOpen: false,
+  profileAvatarDraft: '',
   telegramListings: {
     nft: [],
     username: []
@@ -45,6 +52,11 @@ const state = {
   config: {
     adminUsername: 'Geto_senpai',
     botUsername: 'GetosenpaiShopBot',
+    telegramGroupUrl: '',
+    sellingEnabled: true,
+    telegramListingsEnabled: true,
+    friendsEnabled: false,
+    notificationsEnabled: false,
     maxImageBytes: 8 * 1024 * 1024,
     maxVideoBytes: 80 * 1024 * 1024
   }
@@ -75,6 +87,32 @@ const TELEGRAM_SECTIONS = {
     accent: '#28a86b'
   }
 };
+
+const BI_ICONS = {
+  'arrow-down-right': '<path fill-rule="evenodd" d="M14 13.5a.5.5 0 0 1-.5.5h-6a.5.5 0 0 1 0-1h4.793L2.146 2.854a.5.5 0 1 1 .708-.708L13 12.293V7.5a.5.5 0 0 1 1 0z"/>',
+  'arrow-up-right': '<path fill-rule="evenodd" d="M14 2.5a.5.5 0 0 0-.5-.5h-6a.5.5 0 0 0 0 1h4.793L2.146 13.146a.5.5 0 0 0 .708.708L13 3.707V8.5a.5.5 0 0 0 1 0z"/>',
+  bell: '<path d="M8 16a2 2 0 0 0 1.985-1.75h-3.97A2 2 0 0 0 8 16"/><path d="M8 1.918 7.797 2A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.797-4zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6a5 5 0 0 1 10 0c0 .88.32 4.2 1.22 6"/>',
+  cash: '<path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/><path d="M0 4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V6a2 2 0 0 1-2-2z"/>',
+  'chevron-right': '<path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>',
+  clock: '<path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>',
+  'currency-dollar': '<path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73z"/>',
+  download: '<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5A1.1 1.1 0 0 0 2.1 14h11.8a1.1 1.1 0 0 0 1.1-1.1v-2.5a.5.5 0 0 1 1 0v2.5A2.1 2.1 0 0 1 13.9 15H2.1A2.1 2.1 0 0 1 0 12.9v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>',
+  'folder2-open': '<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.734 15H3.266a2.5 2.5 0 0 1-2.481-2.19L.145 7.686A1.5 1.5 0 0 1 1 6.14zm1.5-.5a.5.5 0 0 0-.5.5V6h11.5a.5.5 0 0 0 .5-.5.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3zM1.138 7.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.488-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633a.5.5 0 0 0-.495.562"/>',
+  gear: '<path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.858 2.929 2.929 0 0 1 0 5.858"/>',
+  gem: '<path d="M3.1.7a.5.5 0 0 1 .4-.2h9a.5.5 0 0 1 .4.2l2.976 3.974a.5.5 0 0 1-.01.614l-7.5 10a.5.5 0 0 1-.8 0l-7.5-10a.5.5 0 0 1-.01-.614zm11.386 3.785-1.806-2.41-.776 2.413zm-3.633.004.961-2.989H4.186l.963 2.989zM5.47 5.489 8 13.366l2.532-7.877zm-1.371-.999-.78-2.415-1.806 2.414zM1.499 5.49l4.772 6.362-2.04-6.362zm8.23 6.362L14.5 5.49h-2.731z"/>',
+  grid: '<path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>',
+  people: '<path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.632 9.282 10 11 10c1.717 0 2.687.632 3.24 1.276.593.69.758 1.456.76 1.72l-.008.004z"/><path d="M11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c.001-.246.154-.986.832-1.664C2.484 10.68 3.711 10 5 10zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/>',
+  person: '<path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>',
+  'plus-lg': '<path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>',
+  send: '<path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995-4.995-3.178a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11zM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>',
+  'star-fill': '<path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187z"/>',
+  'three-dots': '<path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3"/>',
+  'x-lg': '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>'
+};
+
+function biIcon(name) {
+  return `<svg class="bi-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${BI_ICONS[name] || BI_ICONS.grid}</svg>`;
+}
 
 function isServicePlatform(slug) {
   return SERVICE_PLATFORM_SLUGS.has(slug);
@@ -338,6 +376,23 @@ async function loadAdmins() {
   }
 }
 
+async function loadAdminPlatforms() {
+  if (!isAdmin()) return;
+  state.adminPlatforms.loading = true;
+  state.adminPlatforms.error = '';
+  render();
+
+  try {
+    const payload = await api('/api/platforms?scope=admin');
+    state.adminPlatforms.items = payload.platforms || [];
+  } catch (error) {
+    state.adminPlatforms.error = error.message;
+  } finally {
+    state.adminPlatforms.loading = false;
+    render();
+  }
+}
+
 function showToast(message) {
   let toast = document.querySelector('.toast');
   if (!toast) {
@@ -358,6 +413,7 @@ function headerTitle() {
   if (state.route === 'sell') return 'Akkaunt sotish';
   if (state.route === 'history') return 'Tarix';
   if (state.route === 'profile') return 'Profil';
+  if (state.route === 'platform-admin') return 'Platformalar';
   if (state.route === 'admin') return 'Admin panel';
   if (state.route === 'detail') return state.selectedAccount?.title || 'Akkaunt';
   if (state.route === 'telegram') return state.selectedPlatform?.title || 'Telegram';
@@ -366,7 +422,7 @@ function headerTitle() {
 }
 
 function renderHeader() {
-  const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram' || state.route === 'admin';
+  const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram' || state.route === 'admin' || state.route === 'platform-admin';
   const subtitle =
     state.route === 'platforms'
       ? 'Barcha platformalar'
@@ -376,6 +432,8 @@ function renderHeader() {
           ? isAdmin() ? 'Barcha userlar amallari' : 'Sizning e\'lonlaringiz'
           : state.route === 'profile'
             ? 'Shaxsiy profil'
+            : state.route === 'platform-admin'
+              ? 'Global platforma statuslari'
             : state.route === 'admin'
               ? isSuperAdmin() ? 'Adminlarni boshqarish' : 'Yopiq bo\'lim'
         : state.route === 'detail'
@@ -389,14 +447,14 @@ function renderHeader() {
   return `
     <header class="topbar" data-route="${escapeHtml(state.route)}">
       <button class="icon-button ${canGoBack ? '' : 'is-hidden'}" type="button" data-action="back" aria-label="Orqaga">
-        <span aria-hidden="true">×</span>
+        <span aria-hidden="true">${biIcon('x-lg')}</span>
       </button>
       <div class="app-chip">
-        <span aria-hidden="true">$</span>
+        <span aria-hidden="true">${biIcon('cash')}</span>
         <strong>Geto Savdo</strong>
       </div>
       <button class="icon-button" type="button" data-action="refresh" aria-label="Yangilash">
-        <span aria-hidden="true">•••</span>
+        <span aria-hidden="true">${biIcon('three-dots')}</span>
       </button>
     </header>
     <section class="screen-heading">
@@ -728,7 +786,7 @@ function renderPendingFiles() {
               ? `<video src="${escapeHtml(item.url)}" muted playsinline preload="metadata"></video>`
               : `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.file.name)}" decoding="async" />`
           }
-          <button type="button" data-action="remove-file" data-id="${escapeHtml(item.id)}" aria-label="O'chirish">×</button>
+          <button type="button" data-action="remove-file" data-id="${escapeHtml(item.id)}" aria-label="O'chirish">${biIcon('x-lg')}</button>
           <span>${escapeHtml(sizeLabel(item.file.size))}</span>
         </div>
       `
@@ -811,7 +869,7 @@ function renderTelegramServices() {
       </section>
 
       <button class="telegram-fab ${state.telegramFormOpen ? 'is-open' : ''}" type="button" data-action="toggle-telegram-form" aria-label="${escapeHtml(fabLabel)}">
-        <span aria-hidden="true">${state.telegramFormOpen ? '×' : '+'}</span>
+        <span aria-hidden="true">${biIcon(state.telegramFormOpen ? 'x-lg' : 'plus-lg')}</span>
         <strong>${escapeHtml(fabLabel)}</strong>
       </button>
     </section>
@@ -848,12 +906,12 @@ function renderTelegramImageField(activeKey = state.telegramSection) {
         ${
           image
             ? `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.file.name)}" decoding="async" />`
-            : '<em aria-hidden="true">+</em>'
+            : `<em aria-hidden="true">${biIcon('plus-lg')}</em>`
         }
         <strong>NFT rasmi</strong>
         <small>Link preview chiqmasa, xaridor shu ko'rinishni ko'radi.</small>
       </label>
-      ${image ? `<button type="button" data-action="remove-telegram-image" aria-label="Rasmni olib tashlash">×</button>` : ''}
+      ${image ? `<button type="button" data-action="remove-telegram-image" aria-label="Rasmni olib tashlash">${biIcon('x-lg')}</button>` : ''}
     </div>
   `;
 }
@@ -892,20 +950,57 @@ function filteredHistoryAccounts() {
   return state.history.accounts;
 }
 
+function historyDateValue(account) {
+  return account.status === 'sold' && account.sold_at ? account.sold_at : account.created_at;
+}
+
+function historyDate(account) {
+  const date = new Date(historyDateValue(account));
+  if (Number.isNaN(date.getTime())) return 'Sana yo\'q';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
+
+function historyTime(account) {
+  const date = new Date(historyDateValue(account));
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('uz-UZ', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function historyGroups(accounts) {
+  const groups = new Map();
+  for (const account of accounts) {
+    const date = historyDate(account);
+    const current = groups.get(date) || {
+      date,
+      total: 0,
+      accounts: []
+    };
+    current.total += Number(account.price_uzs || 0);
+    current.accounts.push(account);
+    groups.set(date, current);
+  }
+  return [...groups.values()];
+}
+
 function renderHistory() {
   const accounts = filteredHistoryAccounts();
-  const totalSold = state.history.accounts.filter((account) => account.status === 'sold').length;
-  const totalAvailable = state.history.accounts.filter((account) => account.status === 'available').length;
+  const groups = historyGroups(accounts);
 
   return `
     <section class="history-view">
-      <section class="stat-panel">
-        <span>${isAdmin() ? 'Admin tarixi' : 'Mening tarixim'}</span>
-        <strong>${state.history.accounts.length} ta amal</strong>
+      <section class="history-tools" aria-label="Tarix amallari">
         <div>
-          <small>Sotuvda ${totalAvailable}</small>
-          <small>Sotilgan ${totalSold}</small>
+          <span>${isAdmin() ? 'Admin tarixi' : 'Mening e\'lonlarim'}</span>
+          <strong>${accounts.length} ta yozuv</strong>
         </div>
+        <button class="history-export" type="button" data-action="download-history" aria-label="Tarixni yuklab olish">${biIcon('download')}</button>
       </section>
 
       <section class="pill-tabs" aria-label="Tarix filterlari">
@@ -919,29 +1014,46 @@ function renderHistory() {
           ? renderSkeletonGrid('account')
           : state.history.error
             ? renderError(state.history.error)
-            : accounts.length
-              ? `<section class="history-list">${accounts.map((account) => renderHistoryItem(account)).join('')}</section>`
+            : groups.length
+              ? `<section class="history-list">${groups.map((group) => renderHistoryGroup(group)).join('')}</section>`
               : `<div class="empty-state compact"><strong>Tarix bo'sh</strong><p>${isAdmin() ? 'Hali userlar amali topilmadi.' : "Sotuvga qo'ygan yoki sotilgan akkauntingiz hali yo'q."}</p></div>`
       }
     </section>
   `;
 }
 
+function renderHistoryGroup(group) {
+  return `
+    <section class="history-day">
+      <header>
+        <strong>${escapeHtml(group.date)}</strong>
+        <span>${formatPrice(group.total)}</span>
+      </header>
+      ${group.accounts.map((account) => renderHistoryItem(account)).join('')}
+    </section>
+  `;
+}
+
 function renderHistoryItem(account) {
-  const date = new Date(account.sold_at || account.created_at).toLocaleDateString('uz-UZ');
   const seller = isAdmin() && (account.seller_username || account.seller_name)
     ? `<small>${escapeHtml(account.seller_username ? `@${account.seller_username}` : account.seller_name)}</small>`
     : '';
+  const isSold = account.status === 'sold';
+  const statusLabel = isSold ? 'Sotilgan' : 'Sotuvda';
+  const time = historyTime(account);
 
   return `
     <button class="history-item" type="button" data-action="open-history-account" data-id="${escapeHtml(account.id)}">
-      <span class="history-icon ${account.status === 'sold' ? 'is-sold' : ''}" aria-hidden="true">${account.status === 'sold' ? '↘' : '↗'}</span>
-      <span>
-        <strong>${escapeHtml(account.title)}</strong>
-        <small>${date} · ${account.status === 'sold' ? 'Sotilgan' : 'Sotuvda'}</small>
+      <span class="history-icon ${isSold ? 'is-sold' : ''}" aria-hidden="true">${biIcon(isSold ? 'arrow-down-right' : 'arrow-up-right')}</span>
+      <span class="history-copy">
+        <span>
+          <strong>${escapeHtml(account.title)}</strong>
+          <em>${escapeHtml(statusLabel)}</em>
+        </span>
+        <small>${escapeHtml(time || historyDate(account))}</small>
         ${seller}
       </span>
-      <b>${formatPrice(account.price_uzs)}</b>
+      <b class="${isSold ? 'is-positive' : ''}">${isSold ? '+' : ''}${formatPrice(account.price_uzs)}</b>
     </button>
   `;
 }
@@ -958,44 +1070,142 @@ function renderAvatar(sizeClass = '') {
   return `<span class="profile-avatar ${sizeClass}" aria-hidden="true">${escapeHtml(userInitial())}</span>`;
 }
 
+function renderSoonBadge() {
+  return '<span class="row-badge soon-badge">Tez kunda</span>';
+}
+
+function renderProfileEditor() {
+  if (!state.profileEditorOpen) return '';
+
+  const user = state.me?.user || {};
+  const avatarUrl = state.profileAvatarDraft || user.photo_url || '';
+  const avatarPreview = avatarUrl
+    ? `<img class="profile-avatar is-large" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(user.display_name || 'Profil')}" />`
+    : renderAvatar('is-large');
+
+  return `
+    <form class="profile-edit-form" id="profileEditForm">
+      <div class="profile-edit-avatar">
+        ${avatarPreview}
+        <label>
+          <span>${biIcon('folder2-open')}</span>
+          Logo tanlash
+          <input id="profileAvatarInput" type="file" accept="image/*" />
+        </label>
+      </div>
+      <input type="hidden" name="avatarUrl" value="${escapeHtml(avatarUrl)}" />
+      <label>
+        <span>Ism</span>
+        <input name="displayName" maxlength="80" autocomplete="name" required value="${escapeHtml(user.display_name || '')}" />
+      </label>
+      <div class="form-actions">
+        <button class="secondary-button" type="button" data-action="cancel-profile-edit">Bekor qilish</button>
+        <button class="primary-button" type="submit">Saqlash</button>
+      </div>
+      <p class="form-status" id="profileEditStatus"></p>
+    </form>
+  `;
+}
+
 function renderProfile() {
   const user = state.me?.user || {};
   const username = user.username ? `@${user.username}` : 'username yo\'q';
   const roleLabel = isSuperAdmin() ? 'Superadmin' : isAdmin() ? 'Admin' : 'User';
+  const subscriptionCopy = user.is_premium ? 'Premium · Obuna bo\'lgan' : 'Oddiy tarif · Faol';
+  const groupCopy = state.config.telegramGroupUrl ? 'Guruh ulangan' : 'Admin panel orqali biriktiriladi';
 
   return `
     <section class="profile-view">
       <section class="profile-hero">
         ${renderAvatar('is-large')}
         <h2>${escapeHtml(user.display_name || 'Foydalanuvchi')}</h2>
-        <p>${escapeHtml(username)}${user.id ? ` · ID ${escapeHtml(user.id)}` : ''}</p>
-        <span>${escapeHtml(roleLabel)}</span>
+        <p class="profile-meta-pill">${escapeHtml(username)}${user.id ? ` • ID ${escapeHtml(user.id)}` : ''}</p>
+        ${isAdmin() ? `<span class="profile-role">${escapeHtml(roleLabel)}</span>` : ''}
       </section>
 
       <section class="settings-list">
+        <button class="settings-row" type="button" data-action="profile-edit">
+          <span aria-hidden="true">${biIcon('person')}</span>
+          <div>
+            <strong>Profilni tahrirlash</strong>
+          </div>
+          <i aria-hidden="true">${biIcon('chevron-right')}</i>
+        </button>
+        ${renderProfileEditor()}
         <button class="settings-row is-disabled" type="button" disabled>
-          <span aria-hidden="true">◇</span>
-          <strong>Obuna holati</strong>
-          <small>Premium imkoniyatlar</small>
-          <em>Tez kunda</em>
+          <span aria-hidden="true">${biIcon('gem')}</span>
+          <div>
+            <strong>Obuna holati</strong>
+            <small>${escapeHtml(subscriptionCopy)}</small>
+          </div>
+          ${renderSoonBadge()}
+        </button>
+      </section>
+
+      <section class="settings-list">
+        <button class="settings-row" type="button" data-action="open-telegram-community">
+          <span aria-hidden="true">${biIcon('send')}</span>
+          <div>
+            <strong>Telegram guruh</strong>
+            <small>${escapeHtml(groupCopy)}</small>
+          </div>
+          <i aria-hidden="true">${biIcon('chevron-right')}</i>
+        </button>
+        <button class="settings-row" type="button" data-action="usd-rate-info">
+          <span aria-hidden="true">${biIcon('currency-dollar')}</span>
+          <div>
+            <strong>USD Kurs</strong>
+          </div>
+          <i aria-hidden="true">${biIcon('chevron-right')}</i>
+        </button>
+        <button class="settings-row" type="button" data-action="${isAdmin() ? 'open-platform-manager' : 'tab-store'}">
+          <span aria-hidden="true">${biIcon('folder2-open')}</span>
+          <div>
+            <strong>Platformalar</strong>
+            <small>${isAdmin() ? 'Keraksizlarini userlardan yashirish' : 'Savdo bo\'limlari'}</small>
+          </div>
+          <i aria-hidden="true">${biIcon('chevron-right')}</i>
+        </button>
+        <button class="settings-row is-disabled" type="button" disabled>
+          <span aria-hidden="true">${biIcon('people')}</span>
+          <div>
+            <strong>Do'stlar</strong>
+            <small>Taklif qiling va mukofot oling</small>
+          </div>
+          ${renderSoonBadge()}
+        </button>
+        <button class="settings-row is-disabled" type="button" disabled>
+          <span aria-hidden="true">${biIcon('bell')}</span>
+          <div>
+            <strong>Bildirishnomalar</strong>
+            <small>Shaxsiy xabar sozlamalari</small>
+          </div>
+          ${renderSoonBadge()}
         </button>
         <button class="settings-row" type="button" data-action="tab-history">
-          <span aria-hidden="true">◴</span>
-          <strong>${isAdmin() ? 'Barcha amallar tarixi' : 'Mening e\'lonlarim'}</strong>
-          <small>${isAdmin() ? 'Userlar e\'lonlari va savdolari' : 'Sotuvga qo\'ygan va sotgan akkauntlar'}</small>
-          <i aria-hidden="true">›</i>
+          <span aria-hidden="true">${biIcon('clock')}</span>
+          <div>
+            <strong>${isAdmin() ? 'Barcha e\'lonlar tarixi' : 'Mening e\'lonlarim'}</strong>
+            <small>${isAdmin() ? 'Userlar e\'lonlari va savdolari' : 'Sotuvga qo\'ygan va sotgan akkauntlar'}</small>
+          </div>
+          <i aria-hidden="true">${biIcon('chevron-right')}</i>
         </button>
-        ${
-          isAdmin()
-            ? `<button class="settings-row is-admin" type="button" data-action="open-admin">
-                <span aria-hidden="true">⚙</span>
-                <strong>Admin panel</strong>
-                <small>${isSuperAdmin() ? 'Admin qo\'shish va boshqarish' : 'Yopiq admin bo\'lim'}</small>
-                <i aria-hidden="true">›</i>
-              </button>`
-            : ''
-        }
       </section>
+
+      ${
+        isAdmin()
+          ? `<section class="settings-list">
+              <button class="settings-row is-admin" type="button" data-action="open-admin">
+                <span aria-hidden="true">${biIcon('gear')}</span>
+                <div>
+                  <strong>Admin panel</strong>
+                  <small>${isSuperAdmin() ? 'Admin qo\'shish va boshqarish' : 'Yopiq admin bo\'lim'}</small>
+                </div>
+                <i aria-hidden="true">${biIcon('chevron-right')}</i>
+              </button>
+            </section>`
+          : ''
+      }
     </section>
   `;
 }
@@ -1009,40 +1219,147 @@ function renderAdminPanel() {
     <section class="admin-view">
       <section class="stat-panel admin">
         <span>${isSuperAdmin() ? 'Superadmin' : 'Admin'}</span>
-        <strong>${isSuperAdmin() ? 'Adminlarni boshqarish' : 'Admin rejimi'}</strong>
+        <strong>Mini app boshqaruvi</strong>
         <div>
-          <small>Seller info ko'rinadi</small>
-          <small>Tarix: barcha userlar</small>
+          <small>Funksiyalar</small>
+          <small>Platformalar</small>
+          <small>${isSuperAdmin() ? 'Adminlar' : 'Admin rejimi'}</small>
         </div>
       </section>
 
-      ${
-        isSuperAdmin()
-          ? `<form class="admin-form" id="adminForm">
-              <label>
-                <span>Telegram ID</span>
-                <input name="tgUserId" inputmode="numeric" placeholder="8032495342" />
-              </label>
-              <label>
-                <span>Username</span>
-                <input name="username" placeholder="@username" autocomplete="off" />
-              </label>
-              <button class="primary-button" type="submit">Admin qo'shish</button>
-              <p class="form-status" id="adminFormStatus"></p>
-            </form>
+      ${renderAdminSettings()}
 
-            <section class="admin-list">
-              ${
-                state.admins.loading
-                  ? renderSkeletonGrid('account')
-                  : state.admins.error
-                    ? renderError(state.admins.error)
-                    : state.admins.items.map((admin) => renderAdminItem(admin)).join('')
-              }
-            </section>`
-          : `<div class="empty-state compact"><strong>Admin panel</strong><p>Superadmin adminlarni qo'shadi yoki o'chiradi. Sizga barcha userlar tarixi ko'rinadi.</p></div>`
+      <section class="admin-card">
+        <header>
+          <span>${biIcon('folder2-open')}</span>
+          <div>
+            <strong>Platformalar</strong>
+            <small>O'chirilgan platformalar barcha userlardan yashiriladi.</small>
+          </div>
+        </header>
+        ${renderPlatformManager(true)}
+      </section>
+
+      <section class="admin-card">
+        <header>
+          <span>${biIcon('person')}</span>
+          <div>
+            <strong>Adminlar</strong>
+            <small>${isSuperAdmin() ? 'ID orqali yoki username bilan qo\'shing.' : 'Admin qo\'shish faqat superadmin uchun.'}</small>
+          </div>
+        </header>
+        ${renderAdminManagement()}
+      </section>
+    </section>
+  `;
+}
+
+function renderAdminSettings() {
+  return `
+    <form class="admin-form admin-settings-form" id="adminSettingsForm">
+      <label>
+        <span>Telegram guruh linki</span>
+        <input name="telegramGroupUrl" placeholder="https://t.me/..." value="${escapeHtml(state.config.telegramGroupUrl || '')}" />
+      </label>
+      <section class="admin-toggle-list" aria-label="Funksiyalar">
+        ${renderAdminToggle('sellingEnabled', "Qo'shish bo'limi", state.config.sellingEnabled)}
+        ${renderAdminToggle('telegramListingsEnabled', 'Telegram savdosi', state.config.telegramListingsEnabled)}
+        ${renderAdminToggle('friendsEnabled', "Do'stlar funksiyasi", state.config.friendsEnabled)}
+        ${renderAdminToggle('notificationsEnabled', 'Bildirishnomalar', state.config.notificationsEnabled)}
+      </section>
+      <button class="primary-button" type="submit">Sozlamalarni saqlash</button>
+      <p class="form-status" id="adminSettingsStatus"></p>
+    </form>
+  `;
+}
+
+function renderAdminToggle(name, label, checked) {
+  return `
+    <label class="toggle-row">
+      <span>${escapeHtml(label)}</span>
+      <input name="${escapeHtml(name)}" type="checkbox" ${checked ? 'checked' : ''} />
+      <i aria-hidden="true"></i>
+    </label>
+  `;
+}
+
+function renderAdminManagement() {
+  if (!isSuperAdmin()) {
+    return `<div class="empty-state compact"><strong>Superadmin kerak</strong><p>Adminlarni qo'shish va o'chirish superadmin ruxsati bilan ishlaydi.</p></div>`;
+  }
+
+  return `
+    <form class="admin-form" id="adminForm">
+      <label>
+        <span>Telegram ID</span>
+        <input name="tgUserId" inputmode="numeric" placeholder="8032495342" />
+      </label>
+      <label>
+        <span>Username</span>
+        <input name="username" placeholder="@username (ixtiyoriy)" autocomplete="off" />
+      </label>
+      <button class="primary-button" type="submit">Admin qo'shish</button>
+      <p class="form-status" id="adminFormStatus"></p>
+    </form>
+
+    <section class="admin-list">
+      ${
+        state.admins.loading
+          ? renderSkeletonGrid('account')
+          : state.admins.error
+            ? renderError(state.admins.error)
+            : state.admins.items.map((admin) => renderAdminItem(admin)).join('')
       }
     </section>
+  `;
+}
+
+function renderPlatformAdminView() {
+  if (!isAdmin()) {
+    return `<div class="empty-state"><strong>Ruxsat yo'q</strong><p>Platformalarni boshqarish faqat adminlar uchun.</p></div>`;
+  }
+
+  return `
+    <section class="admin-view">
+      <section class="admin-card">
+        <header>
+          <span>${biIcon('folder2-open')}</span>
+          <div>
+            <strong>Platformalar nomi</strong>
+            <small>Status o'chirilsa, platforma barcha userlarda ko'rinmaydi.</small>
+          </div>
+        </header>
+        ${renderPlatformManager(false)}
+      </section>
+    </section>
+  `;
+}
+
+function renderPlatformManager(compact = false) {
+  if (state.adminPlatforms.loading) return `<div class="empty-state compact"><strong>Yuklanmoqda...</strong></div>`;
+  if (state.adminPlatforms.error) return renderError(state.adminPlatforms.error);
+  if (!state.adminPlatforms.items.length) return `<div class="empty-state compact"><strong>Platforma topilmadi</strong></div>`;
+
+  return `
+    <section class="platform-admin-list ${compact ? 'is-compact' : ''}">
+      ${state.adminPlatforms.items.map((platform) => renderPlatformAdminItem(platform)).join('')}
+    </section>
+  `;
+}
+
+function renderPlatformAdminItem(platform) {
+  return `
+    <article class="platform-admin-item">
+      <span style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}" aria-hidden="true">${escapeHtml(initials(platform.title))}</span>
+      <div>
+        <strong>${escapeHtml(platform.title)}</strong>
+        <small>${escapeHtml(platform.subtitle || platform.slug)} · ${platform.count || 0} ta e'lon</small>
+      </div>
+      <label class="switch-control">
+        <input type="checkbox" data-action="toggle-platform-status" data-slug="${escapeHtml(platform.slug)}" ${platform.is_active ? 'checked' : ''} />
+        <i aria-hidden="true"></i>
+      </label>
+    </article>
   `;
 }
 
@@ -1051,7 +1368,7 @@ function renderAdminItem(admin) {
   const removable = admin.source !== 'env' && admin.role !== 'superadmin';
   return `
     <article class="admin-item">
-      <span aria-hidden="true">${admin.role === 'superadmin' ? '★' : '•'}</span>
+      <span aria-hidden="true">${admin.role === 'superadmin' ? biIcon('star-fill') : biIcon('person')}</span>
       <div>
         <strong>${escapeHtml(title)}</strong>
         <small>${escapeHtml(admin.role)} · ${admin.source === 'env' ? 'Vercel env' : 'database'}</small>
@@ -1065,19 +1382,19 @@ function renderBottomNav() {
   return `
     <nav class="bottom-nav" aria-label="Asosiy">
       <button class="${state.tab === 'home' ? 'active' : ''}" type="button" data-action="tab-store">
-        <span aria-hidden="true">▦</span>
+        <span aria-hidden="true">${biIcon('grid')}</span>
         <strong>Bosh</strong>
       </button>
-      <button class="nav-add ${state.tab === 'sell' ? 'active' : ''}" type="button" data-action="tab-sell" aria-label="Qo'shish">
-        <span aria-hidden="true">+</span>
+      <button class="nav-add ${state.tab === 'sell' ? 'active' : ''} ${state.config.sellingEnabled ? '' : 'is-disabled'}" type="button" data-action="tab-sell" aria-label="Qo'shish" aria-disabled="${state.config.sellingEnabled ? 'false' : 'true'}">
+        <span aria-hidden="true">${biIcon('plus-lg')}</span>
         <strong>Qo'shish</strong>
       </button>
       <button class="${state.tab === 'history' ? 'active' : ''}" type="button" data-action="tab-history">
-        <span aria-hidden="true">◷</span>
+        <span aria-hidden="true">${biIcon('clock')}</span>
         <strong>Tarix</strong>
       </button>
       <button class="${state.tab === 'profile' ? 'active' : ''}" type="button" data-action="tab-profile">
-        <span aria-hidden="true">♙</span>
+        <span aria-hidden="true">${biIcon('person')}</span>
         <strong>Profil</strong>
       </button>
     </nav>
@@ -1090,7 +1407,7 @@ function renderLightbox() {
 
   return `
     <div class="lightbox" data-action="close-lightbox">
-      <button type="button" data-action="close-lightbox" aria-label="Yopish">×</button>
+      <button type="button" data-action="close-lightbox" aria-label="Yopish">${biIcon('x-lg')}</button>
       ${
         type === 'video'
           ? `<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`
@@ -1104,6 +1421,7 @@ function currentContent() {
   if (state.route === 'sell') return renderSell();
   if (state.route === 'history') return renderHistory();
   if (state.route === 'profile') return renderProfile();
+  if (state.route === 'platform-admin') return renderPlatformAdminView();
   if (state.route === 'admin') return renderAdminPanel();
   if (state.route === 'telegram') return renderTelegramServices();
   if (state.route === 'accounts') return renderAccounts();
@@ -1142,6 +1460,11 @@ async function openPlatform(slug) {
   if (!platform) return;
 
   if (isServicePlatform(slug)) {
+    if (!state.config.telegramListingsEnabled) {
+      showToast('Telegram savdosi admin tomonidan vaqtincha yopilgan.');
+      return;
+    }
+
     clearTelegramListingImage();
     withRenderTransition(() => {
       cancelAccountLoads();
@@ -1221,6 +1544,14 @@ function goBack() {
       render();
     });
   }
+
+  if (state.route === 'platform-admin') {
+    withRenderTransition(() => {
+      state.route = 'profile';
+      state.tab = 'profile';
+      render();
+    });
+  }
 }
 
 async function refreshCurrent() {
@@ -1245,8 +1576,13 @@ async function refreshCurrent() {
     return;
   }
 
+  if (state.route === 'platform-admin') {
+    await loadAdminPlatforms();
+    return;
+  }
+
   if (state.route === 'admin') {
-    await loadAdmins();
+    await Promise.all([loadConfig(), loadAdminPlatforms(), loadAdmins()]);
     return;
   }
 
@@ -1254,6 +1590,11 @@ async function refreshCurrent() {
 }
 
 function switchTab(tab) {
+  if (tab === 'sell' && !state.config.sellingEnabled) {
+    showToast("Qo'shish bo'limi admin tomonidan vaqtincha yopilgan.");
+    return;
+  }
+
   const currentPlatformSlug = state.selectedPlatform?.slug;
   const platformSlug =
     tab === 'sell'
@@ -1278,6 +1619,8 @@ function switchTab(tab) {
     state.selectedPlatform = null;
     state.saleDraft.platformSlug = isServicePlatform(platformSlug) ? 'mobile-legends' : platformSlug;
     state.saleDraft.lookup = null;
+    state.profileEditorOpen = false;
+    state.profileAvatarDraft = '';
     state.accountStatus = 'available';
     state.accounts = [];
     state.loading = false;
@@ -1504,6 +1847,55 @@ function setTelegramListingImage(files) {
   renderTelegramImagePreview();
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result || '')));
+    reader.addEventListener('error', () => reject(new Error('Rasm o\'qilmadi.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', () => reject(new Error('Rasm ochilmadi.')));
+    image.src = src;
+  });
+}
+
+async function profileImageToDataUrl(file) {
+  if (!file.type.startsWith('image/')) throw new Error('Logo uchun faqat rasm tanlang.');
+  if (file.size > state.config.maxImageBytes) throw new Error(`${file.name} juda katta. Limit: ${sizeLabel(state.config.maxImageBytes)}.`);
+
+  const raw = await readFileAsDataUrl(file);
+  const image = await loadImage(raw);
+  const size = Math.min(320, image.naturalWidth || 320, image.naturalHeight || 320);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext('2d');
+  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+  const sourceX = Math.max(0, (image.naturalWidth - sourceSize) / 2);
+  const sourceY = Math.max(0, (image.naturalHeight - sourceSize) / 2);
+  context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+  return canvas.toDataURL('image/webp', 0.82);
+}
+
+async function setProfileAvatar(files) {
+  const file = files?.[0];
+  if (!file) return;
+
+  try {
+    state.profileAvatarDraft = await profileImageToDataUrl(file);
+    render();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function parsePrice(value) {
   return Number(String(value || '').replace(/[^\d]/g, ''));
 }
@@ -1727,6 +2119,70 @@ async function submitTelegramListing(event) {
   }
 }
 
+async function submitProfileEdit(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.('#profileEditForm');
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const formData = new FormData(form);
+  const status = form.querySelector('#profileEditStatus');
+  const button = form.querySelector('button[type="submit"]');
+
+  try {
+    button.disabled = true;
+    status.textContent = 'Profil saqlanmoqda...';
+    const payload = await api('/api/me', {
+      method: 'PUT',
+      body: {
+        displayName: formData.get('displayName'),
+        avatarUrl: formData.get('avatarUrl')
+      }
+    });
+    state.me = payload;
+    state.profileEditorOpen = false;
+    state.profileAvatarDraft = '';
+    showToast('Profil yangilandi.');
+    render();
+  } catch (error) {
+    status.textContent = '';
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function submitAdminSettings(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.('#adminSettingsForm');
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const status = form.querySelector('#adminSettingsStatus');
+  const button = form.querySelector('button[type="submit"]');
+
+  try {
+    button.disabled = true;
+    status.textContent = 'Sozlamalar saqlanmoqda...';
+    const payload = await api('/api/settings', {
+      method: 'PUT',
+      body: {
+        telegramGroupUrl: form.elements.telegramGroupUrl.value,
+        sellingEnabled: form.elements.sellingEnabled.checked,
+        telegramListingsEnabled: form.elements.telegramListingsEnabled.checked,
+        friendsEnabled: form.elements.friendsEnabled.checked,
+        notificationsEnabled: form.elements.notificationsEnabled.checked
+      }
+    });
+    state.config = { ...state.config, ...payload };
+    showToast('Sozlamalar saqlandi.');
+    render();
+  } catch (error) {
+    status.textContent = '';
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function submitAdmin(event) {
   event.preventDefault();
   const form = event.target?.closest?.('#adminForm');
@@ -1769,6 +2225,76 @@ async function deleteAdmin(id) {
   } catch (error) {
     showToast(error.message);
   }
+}
+
+async function togglePlatformStatus(slug, isActive) {
+  try {
+    await api('/api/platforms', {
+      method: 'PATCH',
+      body: {
+        slug,
+        isActive
+      }
+    });
+    state.adminPlatforms.items = state.adminPlatforms.items.map((platform) =>
+      platform.slug === slug ? { ...platform, is_active: isActive } : platform
+    );
+    await loadPlatforms();
+    showToast(isActive ? 'Platforma yoqildi.' : 'Platforma userlardan yashirildi.');
+    render();
+  } catch (error) {
+    showToast(error.message);
+    await loadAdminPlatforms();
+  }
+}
+
+async function openAdminPanel() {
+  withRenderTransition(() => {
+    state.route = 'admin';
+    state.tab = 'profile';
+    state.profileEditorOpen = false;
+    state.profileAvatarDraft = '';
+    render();
+  });
+  await Promise.all([loadConfig(), loadAdminPlatforms(), loadAdmins()]);
+}
+
+async function openPlatformManager() {
+  if (!isAdmin()) {
+    switchTab('home');
+    return;
+  }
+
+  withRenderTransition(() => {
+    state.route = 'platform-admin';
+    state.tab = 'profile';
+    state.profileEditorOpen = false;
+    state.profileAvatarDraft = '';
+    render();
+  });
+  await loadAdminPlatforms();
+}
+
+function openTelegramTarget(raw) {
+  const value = String(raw || '').trim();
+  if (!value) {
+    showToast('Telegram guruh hali admin panelda biriktirilmagan.');
+    return;
+  }
+
+  const clean = value.replace(/^@/, '');
+  const httpsLink = /^https?:\/\//i.test(value)
+    ? value
+    : /^t\.me\//i.test(clean)
+      ? `https://${clean}`
+      : `https://t.me/${clean}`;
+
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(httpsLink);
+    return;
+  }
+
+  window.open(httpsLink, '_blank', 'noopener,noreferrer');
 }
 
 async function openAdminWithText(text, toastMessage = 'Xabar matni tayyor. Chat ochilmoqda.') {
@@ -1833,6 +2359,39 @@ function openTelegramProfile(username) {
   }, 450);
 }
 
+function csvCell(value) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+function downloadHistory() {
+  const accounts = filteredHistoryAccounts();
+  if (!accounts.length) {
+    showToast('Yuklab olish uchun tarix topilmadi.');
+    return;
+  }
+
+  const rows = [
+    ['Sana', 'Vaqt', 'Nomi', 'Status', 'Narx'],
+    ...accounts.map((account) => [
+      historyDate(account),
+      historyTime(account),
+      account.title,
+      account.status === 'sold' ? 'Sotilgan' : 'Sotuvda',
+      account.price_uzs
+    ])
+  ];
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `tarix-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 async function handleTelegramListingBuy(id) {
   const listing = findTelegramListing(id);
   if (!listing) return;
@@ -1871,16 +2430,24 @@ app.addEventListener('click', async (event) => {
     state.history.filter = control.dataset.filter || 'all';
     render();
   }
+  if (action === 'download-history') downloadHistory();
   if (action === 'set-telegram-section') setTelegramSection(control.dataset.section);
   if (action === 'toggle-telegram-form') toggleTelegramForm();
-  if (action === 'open-admin') {
-    withRenderTransition(() => {
-      state.route = 'admin';
-      state.tab = 'profile';
-      render();
-    });
-    await loadAdmins();
+  if (action === 'profile-edit') {
+    state.profileEditorOpen = true;
+    state.profileAvatarDraft = '';
+    render();
   }
+  if (action === 'cancel-profile-edit') {
+    state.profileEditorOpen = false;
+    state.profileAvatarDraft = '';
+    render();
+  }
+  if (action === 'open-telegram-community') openTelegramTarget(state.config.telegramGroupUrl);
+  if (action === 'open-platform-manager') await openPlatformManager();
+  if (action === 'toggle-platform-status') await togglePlatformStatus(control.dataset.slug, control.checked);
+  if (action === 'usd-rate-info') showToast('USD kurs bo\'limi tez kunda qo\'shiladi.');
+  if (action === 'open-admin') await openAdminPanel();
   if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
   if (action === 'lookup-account') await lookupAccount();
   if (action === 'back') goBack();
@@ -1912,6 +2479,10 @@ app.addEventListener('change', (event) => {
   if (event.target.id === 'telegramImageInput') {
     setTelegramListingImage(event.target.files || []);
   }
+
+  if (event.target.id === 'profileAvatarInput') {
+    setProfileAvatar(event.target.files || []);
+  }
 });
 
 app.addEventListener('input', (event) => {
@@ -1927,6 +2498,14 @@ app.addEventListener('submit', (event) => {
 
   if (event.target.id === 'telegramListingForm') {
     submitTelegramListing(event);
+  }
+
+  if (event.target.id === 'profileEditForm') {
+    submitProfileEdit(event);
+  }
+
+  if (event.target.id === 'adminSettingsForm') {
+    submitAdminSettings(event);
   }
 
   if (event.target.id === 'adminForm') {

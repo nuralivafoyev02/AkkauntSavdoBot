@@ -1,4 +1,4 @@
-import { allowMethods, getSupabase, publicAccount, sendError, sendJson } from './_shared.js';
+import { allowMethods, getSupabase, publicAccount, readJson, requireAdmin, sendError, sendJson } from './_shared.js';
 import { mockAccounts, mockPlatforms } from './_mock.js';
 
 const PLATFORM_IMAGES = {
@@ -20,7 +20,7 @@ const DEFAULT_PLATFORM_ROWS = [
   }
 ];
 
-function attachCounts(platforms, accounts) {
+function attachCounts(platforms, accounts, options = {}) {
   const counts = accounts.reduce((acc, account) => {
     if (account.status === 'available') {
       acc[account.platform_slug] = (acc[account.platform_slug] || 0) + 1;
@@ -40,38 +40,80 @@ function attachCounts(platforms, accounts) {
             subtitle: platform.subtitle,
             accent_color: platform.accent_color
           }
-        : platform
+        : {
+            ...platform,
+            is_active: true
+          }
     );
   }
 
   return [...platformMap.values()]
-    .filter((platform) => VISIBLE_PLATFORMS.has(platform.slug))
+    .filter((platform) => options.admin || (VISIBLE_PLATFORMS.has(platform.slug) && platform.is_active !== false))
     .map((platform) => ({
       ...platform,
       image_url: platform.image_url || PLATFORM_IMAGES[platform.slug] || '',
+      is_active: platform.is_active !== false,
       count: counts[platform.slug] || 0
     }))
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 }
 
+function cleanSlug(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80);
+}
+
 export default async function handler(req, res) {
-  if (!allowMethods(req, res, ['GET'])) return;
+  if (!allowMethods(req, res, ['GET', 'PATCH'])) return;
 
   try {
     const supabase = await getSupabase();
+    const url = new URL(req.url, 'http://localhost');
+    const adminScope = url.searchParams.get('scope') === 'admin';
+
+    if (req.method === 'PATCH') {
+      const { supabase: adminSupabase } = await requireAdmin(req);
+      if (!adminSupabase) {
+        sendJson(res, 503, { error: 'Supabase sozlanmagan.' });
+        return;
+      }
+
+      const body = await readJson(req);
+      const slug = cleanSlug(body.slug);
+      if (!slug) {
+        sendJson(res, 422, { error: 'Platforma topilmadi.' });
+        return;
+      }
+
+      const { data, error } = await adminSupabase
+        .from('platforms')
+        .update({ is_active: Boolean(body.isActive ?? body.is_active) })
+        .eq('slug', slug)
+        .select('slug,title,subtitle,accent_color,sort_order,is_active')
+        .single();
+
+      if (error) throw error;
+      sendJson(res, 200, { platform: data });
+      return;
+    }
+
+    if (adminScope) await requireAdmin(req);
+
     if (!supabase) {
       sendJson(res, 200, {
         demo: true,
-        platforms: attachCounts(mockPlatforms, mockAccounts.map(publicAccount))
+        platforms: attachCounts(mockPlatforms, mockAccounts.map(publicAccount), { admin: adminScope })
       });
       return;
     }
 
-    const { data: platforms, error: platformError } = await supabase
+    let platformQuery = supabase
       .from('platforms')
-      .select('slug,title,subtitle,accent_color,sort_order')
-      .eq('is_active', true)
+      .select('slug,title,subtitle,accent_color,sort_order,is_active')
       .order('sort_order', { ascending: true });
+
+    if (!adminScope) platformQuery = platformQuery.eq('is_active', true);
+
+    const { data: platforms, error: platformError } = await platformQuery;
 
     if (platformError) throw platformError;
 
@@ -84,7 +126,7 @@ export default async function handler(req, res) {
 
     sendJson(res, 200, {
       demo: false,
-      platforms: attachCounts(platforms || [], accounts || [])
+      platforms: attachCounts(platforms || [], accounts || [], { admin: adminScope })
     });
   } catch (error) {
     sendError(res, error);

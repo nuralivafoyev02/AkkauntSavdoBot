@@ -74,6 +74,19 @@ function cleanMedia(media) {
     .filter((item) => item.url && item.path);
 }
 
+async function isPlatformActive(supabase, slug) {
+  if (!supabase || !slug) return true;
+
+  const { data, error } = await supabase
+    .from('platforms')
+    .select('is_active')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.is_active !== false;
+}
+
 async function listAccounts(req, res) {
   const url = new URL(req.url, getBaseUrl(req));
   const platform = url.searchParams.get('platform');
@@ -100,6 +113,7 @@ async function listAccounts(req, res) {
   }
 
   const includeSeller = role.isAdmin;
+  const canSeeInactivePlatform = role.isAdmin || scope === 'admin';
 
   if (!supabase) {
     let rawAccounts = [...mockAccounts];
@@ -118,6 +132,14 @@ async function listAccounts(req, res) {
     sendJson(res, 200, {
       demo: true,
       accounts
+    });
+    return;
+  }
+
+  if (platform && !canSeeInactivePlatform && !(await isPlatformActive(supabase, platform))) {
+    sendJson(res, 200, {
+      demo: false,
+      accounts: []
     });
     return;
   }
@@ -264,6 +286,11 @@ async function createAccount(req, res) {
       demo: true,
       account: created
     });
+    return;
+  }
+
+  if (!(await isPlatformActive(supabase, platformSlug))) {
+    sendJson(res, 422, { error: 'Bu platforma hozircha yopilgan.' });
     return;
   }
 
