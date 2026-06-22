@@ -107,7 +107,12 @@ const BI_ICONS = {
   send: '<path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995-4.995-3.178a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11zM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>',
   'star-fill': '<path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187z"/>',
   'three-dots': '<path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3"/>',
-  'x-lg': '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>'
+  'x-lg': '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>',
+  'arrow-left': '<path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/>',
+  'arrow-repeat': `<svg class="bi-icon" viewBox="0 0 16 16">
+  <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.418A6 6 0 1 1 8 2v1z"/>
+  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+</svg>`
 };
 
 function biIcon(name) {
@@ -447,14 +452,14 @@ function renderHeader() {
   return `
     <header class="topbar" data-route="${escapeHtml(state.route)}">
       <button class="icon-button ${canGoBack ? '' : 'is-hidden'}" type="button" data-action="back" aria-label="Orqaga">
-        <span aria-hidden="true">${biIcon('x-lg')}</span>
+        <span aria-hidden="true">${biIcon('arrow-left')}</span>
       </button>
       <div class="app-chip">
         <span aria-hidden="true">${biIcon('cash')}</span>
         <strong>Geto Savdo</strong>
       </div>
       <button class="icon-button" type="button" data-action="refresh" aria-label="Yangilash">
-        <span aria-hidden="true">${biIcon('three-dots')}</span>
+        <span aria-hidden="true">${biIcon('arrow-repeat')}</span>
       </button>
     </header>
     <section class="screen-heading">
@@ -1387,7 +1392,7 @@ function renderBottomNav() {
       </button>
       <button class="nav-add ${state.tab === 'sell' ? 'active' : ''} ${state.config.sellingEnabled ? '' : 'is-disabled'}" type="button" data-action="tab-sell" aria-label="Qo'shish" aria-disabled="${state.config.sellingEnabled ? 'false' : 'true'}">
         <span aria-hidden="true">${biIcon('plus-lg')}</span>
-        <strong>Qo'shish</strong>
+        <strong>Sotish</strong>
       </button>
       <button class="${state.tab === 'history' ? 'active' : ''}" type="button" data-action="tab-history">
         <span aria-hidden="true">${biIcon('clock')}</span>

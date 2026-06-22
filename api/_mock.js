@@ -22,7 +22,7 @@ export const mockPlatforms = [
     title: 'PUBG Mobile',
     subtitle: 'UC, skin va inventar',
     accent_color: '#d4a017',
-    image_url: 'https://www.pubgmobile.com/common/images/icon_logo.jpg',
+    image_url: '/assets/pubg-mobile.png',
     sort_order: 30,
     count: 0
   },
@@ -31,7 +31,7 @@ export const mockPlatforms = [
     title: 'Steam',
     subtitle: 'Game library va profil',
     accent_color: '#1b8a6b',
-    image_url: 'https://cdn.simpleicons.org/steam/ffffff',
+    image_url: '/assets/steam.png',
     sort_order: 40,
     count: 2
   },
@@ -40,7 +40,7 @@ export const mockPlatforms = [
     title: 'Telegram',
     subtitle: 'NFT va username savdosi',
     accent_color: '#2aabee',
-    image_url: 'https://cdn.simpleicons.org/telegram/ffffff',
+    image_url: '/assets/telegram.png',
     sort_order: 50,
     count: 0
   },

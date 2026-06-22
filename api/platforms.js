@@ -4,9 +4,9 @@ import { mockAccounts, mockPlatforms } from './_mock.js';
 const PLATFORM_IMAGES = {
   'free-fire': '/assets/free-fire.png',
   'mobile-legends': '/assets/mobile-legends-5v5.png',
-  'pubg-mobile': 'https://www.pubgmobile.com/common/images/icon_logo.jpg',
-  steam: 'https://cdn.simpleicons.org/steam/ffffff',
-  telegram: 'https://cdn.simpleicons.org/telegram/ffffff'
+  'pubg-mobile': '/assets/pubg-mobile.png',
+  'steam': '/assets/steam.png',
+  'telegram': '/assets/telegram.png'
 };
 
 const VISIBLE_PLATFORMS = new Set(['free-fire', 'mobile-legends', 'pubg-mobile', 'steam', 'telegram']);
