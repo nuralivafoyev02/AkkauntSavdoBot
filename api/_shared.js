@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
 
 export const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'account-media';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 let supabaseClient;
+let supabaseModulePromise;
 
 function headerValue(req, name) {
   const value = req.headers[name.toLowerCase()] || req.headers[name];
@@ -17,12 +17,15 @@ export function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-export function getSupabase() {
+export async function getSupabase() {
   if (supabaseClient) return supabaseClient;
 
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
+
+  supabaseModulePromise ||= import('@supabase/supabase-js');
+  const { createClient } = await supabaseModulePromise;
 
   supabaseClient = createClient(url, key, {
     auth: {
@@ -34,8 +37,8 @@ export function getSupabase() {
   return supabaseClient;
 }
 
-export function requireSupabase() {
-  const supabase = getSupabase();
+export async function requireSupabase() {
+  const supabase = await getSupabase();
   if (!supabase) {
     const error = new Error('SUPABASE_URL yoki SUPABASE_SERVICE_ROLE_KEY sozlanmagan.');
     error.statusCode = 500;

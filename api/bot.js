@@ -74,6 +74,7 @@ function isAdmin(from) {
 
 function greetingPayload(chatId, req) {
   return {
+    method: 'sendMessage',
     chat_id: chatId,
     text: [
       'Assalomu alaykum 👋',
@@ -96,10 +97,18 @@ function greetingPayload(chatId, req) {
   };
 }
 
+function runInBackground(task, label) {
+  Promise.resolve()
+    .then(task)
+    .catch((error) => {
+      console.error(`${label}:`, error?.message || error);
+    });
+}
+
 async function saveBotUser(message) {
   if (message?.chat?.type !== 'private' || !message.from?.id) return;
 
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (!supabase) return;
 
   const user = message.from;
@@ -137,7 +146,7 @@ function parseBroadcastCommand(text, message) {
 }
 
 async function markBotUserInactive(tgUserId) {
-  const supabase = requireSupabase();
+  const supabase = await requireSupabase();
   await supabase
     .from('bot_users')
     .update({
@@ -149,7 +158,7 @@ async function markBotUserInactive(tgUserId) {
 }
 
 async function broadcastToUsers(text) {
-  const supabase = requireSupabase();
+  const supabase = await requireSupabase();
   let sent = 0;
   let failed = 0;
   let offset = 0;
@@ -191,7 +200,7 @@ async function broadcastToUsers(text) {
 }
 
 async function markSoldByTitle(title) {
-  const supabase = requireSupabase();
+  const supabase = await requireSupabase();
   const normalizedTitle = title.trim();
   const accountIdMatch = normalizedTitle.match(/\d{5,}/);
 
@@ -246,7 +255,7 @@ async function markSoldByTitle(title) {
   return data || [];
 }
 
-async function handleMessage(message, req) {
+async function handleMessage(message, req, backgroundTasks = []) {
   if (!message?.chat?.id) return;
 
   const chatId = message.chat.id;
@@ -256,7 +265,10 @@ async function handleMessage(message, req) {
   const broadcastText = parseBroadcastCommand(text, message);
 
   if (chatType === 'private') {
-    await saveBotUser(message);
+    backgroundTasks.push({
+      label: 'saveBotUser',
+      task: () => saveBotUser(message)
+    });
   }
 
   if (broadcastText !== null && isAdmin(message.from)) {
@@ -309,7 +321,7 @@ async function handleMessage(message, req) {
 
   if (chatType !== 'private') return;
 
-  await telegram('sendMessage', greetingPayload(chatId, req));
+  return greetingPayload(chatId, req);
 }
 
 export default async function handler(req, res) {
@@ -326,12 +338,17 @@ export default async function handler(req, res) {
 
     const update = await readJson(req);
     const message = update.message || update.edited_message;
+    const backgroundTasks = [];
+    let webhookReply = null;
 
     if (message) {
-      await handleMessage(message, req);
+      webhookReply = await handleMessage(message, req, backgroundTasks);
     }
 
-    sendJson(res, 200, { ok: true });
+    sendJson(res, 200, webhookReply || { ok: true });
+    for (const { task, label } of backgroundTasks) {
+      runInBackground(task, label);
+    }
   } catch (error) {
     sendError(res, error);
   }

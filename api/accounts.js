@@ -49,7 +49,7 @@ async function listAccounts(req, res) {
   const statusParam = url.searchParams.get('status');
   const status = ['available', 'sold'].includes(statusParam) ? statusParam : 'available';
 
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (!supabase) {
     let accounts = mockAccounts.map(publicAccount);
     if (platform) accounts = accounts.filter((account) => account.platform_slug === platform);
@@ -136,7 +136,7 @@ async function createAccount(req, res) {
     return;
   }
 
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
   if (!supabase) {
     const created = publicAccount({
       id: `local-${Date.now()}`,

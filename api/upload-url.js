@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const supabase = requireSupabase();
+    const supabase = await requireSupabase();
     const fileName = safeFileName(body.fileName);
     const path = `submissions/${user.id || 'guest'}/${todayFolder()}/${crypto.randomUUID()}-${fileName}`;
 

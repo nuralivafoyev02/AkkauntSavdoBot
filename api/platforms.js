@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   if (!allowMethods(req, res, ['GET'])) return;
 
   try {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
     if (!supabase) {
       sendJson(res, 200, {
         demo: true,
