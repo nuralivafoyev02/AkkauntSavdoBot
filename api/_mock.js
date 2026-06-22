@@ -114,5 +114,33 @@ export const mockAccounts = [
     is_top: false,
     media: [],
     created_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'demo-tg-nft-001',
+    platform_slug: 'telegram',
+    title: 'https://t.me/nft/demo',
+    description: '@@listing_type:nft@@\nTelegram NFT: https://t.me/nft/demo',
+    listing_type: 'nft',
+    price_uzs: 1200000,
+    status: 'available',
+    seller_username: 'local_dev',
+    seller_name: 'Local Dev',
+    is_top: false,
+    media: [],
+    created_at: new Date(now - 3 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'demo-tg-username-001',
+    platform_slug: 'telegram',
+    title: '@demo_username',
+    description: '@@listing_type:username@@\nTelegram username: @demo_username',
+    listing_type: 'username',
+    price_uzs: 2500000,
+    status: 'available',
+    seller_username: 'local_dev',
+    seller_name: 'Local Dev',
+    is_top: false,
+    media: [],
+    created_at: new Date(now - 4 * 60 * 60 * 1000).toISOString()
   }
 ];

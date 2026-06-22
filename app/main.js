@@ -11,6 +11,13 @@ const state = {
   demo: false,
   platforms: [],
   accounts: [],
+  telegramListings: {
+    nft: [],
+    username: []
+  },
+  telegramLoading: false,
+  telegramError: '',
+  telegramFormOpen: false,
   accountsRequestId: 0,
   accountStatus: 'available',
   telegramSection: 'nft',
@@ -38,14 +45,20 @@ const TELEGRAM_SECTIONS = {
     title: 'NFT',
     label: 'NFT',
     headline: 'Telegram NFT',
-    copy: "Telegram NFT sovg'alarini sotish yoki sotib olish.",
+    linkLabel: 'NFT linki',
+    placeholder: 'https://t.me/nft/...',
+    empty: "Sotuvda NFT yo'q",
+    copy: "Telegram NFT sovg'alari",
     accent: '#2aabee'
   },
   username: {
     title: 'Username',
     label: 'Username',
     headline: 'Telegram username',
-    copy: "Band username sotish yoki sotib olish.",
+    linkLabel: 'Username',
+    placeholder: '@username yoki t.me/username',
+    empty: "Sotuvda username yo'q",
+    copy: 'Telegram username',
     accent: '#28a86b'
   }
 };
@@ -94,6 +107,23 @@ function sizeLabel(bytes) {
 function uid() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function optimizedImageUrl(url, width = 640, quality = 72) {
+  if (!url) return '';
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!parsed.pathname.includes('/storage/v1/object/public/')) return url;
+
+    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'cover');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 function setTelegramChrome() {
@@ -203,6 +233,32 @@ async function loadAccounts(platformSlug, status = state.accountStatus) {
   }
 }
 
+async function loadTelegramListings(section = state.telegramSection) {
+  const listingType = TELEGRAM_SECTIONS[section] ? section : 'nft';
+  state.telegramLoading = true;
+  state.telegramError = '';
+  render();
+
+  try {
+    const params = new URLSearchParams({
+      platform: 'telegram',
+      status: 'available',
+      listingType
+    });
+    const payload = await api(`/api/accounts?${params.toString()}`);
+    state.telegramListings = {
+      ...state.telegramListings,
+      [listingType]: payload.accounts || []
+    };
+    state.demo = Boolean(payload.demo);
+  } catch (error) {
+    state.telegramError = error.message;
+  } finally {
+    state.telegramLoading = false;
+    render();
+  }
+}
+
 function showToast(message) {
   let toast = document.querySelector('.toast');
   if (!toast) {
@@ -264,7 +320,7 @@ function renderPlatformVisual(platform) {
     <div class="platform-visual" style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
       ${
         platform.image_url
-          ? `<img src="${escapeHtml(platform.image_url)}" alt="${escapeHtml(platform.title)}" loading="lazy" />`
+          ? `<img src="${escapeHtml(platform.image_url)}" alt="${escapeHtml(platform.title)}" loading="lazy" decoding="async" />`
           : `<span>${escapeHtml(label)}</span>`
       }
       <i></i>
@@ -312,10 +368,11 @@ function firstMedia(account) {
   return account.media.find((item) => item.type === 'image') || account.media[0] || null;
 }
 
-function renderAccountCover(account) {
+function renderAccountCover(account, index = 0) {
   const media = firstMedia(account);
   const badge = account.status === 'sold' ? 'SOTILDI' : account.is_new ? 'NEW' : account.is_top ? 'TOP' : '';
   const badgeClass = account.status === 'sold' ? 'is-sold' : account.is_new ? 'is-new' : '';
+  const isEager = index < 2;
 
   return `
     <div class="account-cover">
@@ -323,7 +380,7 @@ function renderAccountCover(account) {
         media?.url
           ? media.type === 'video'
             ? `<video src="${escapeHtml(media.url)}" muted playsinline preload="metadata"></video>`
-            : `<img src="${escapeHtml(media.url)}" alt="${escapeHtml(account.title)}" loading="lazy" />`
+            : `<img src="${escapeHtml(optimizedImageUrl(media.url, 520, 70))}" alt="${escapeHtml(account.title)}" loading="${isEager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${isEager ? 'high' : 'auto'}" />`
           : renderGeneratedCover(account)
       }
       ${badge ? `<span class="corner-badge ${badgeClass}">${badge}</span>` : ''}
@@ -377,7 +434,7 @@ function renderAccounts() {
           .map(
             (account, index) => `
               <button class="account-card ${account.status === 'sold' ? 'is-sold' : ''}" type="button" data-action="open-account" data-id="${escapeHtml(account.id)}" style="--delay:${index * 35}ms">
-                ${renderAccountCover(account)}
+                ${renderAccountCover(account, index)}
                 <span>${escapeHtml(account.title)}</span>
                 ${accountMetaLine(account) ? `<small>${escapeHtml(accountMetaLine(account))}</small>` : ''}
                 <strong>${formatPrice(account.price_uzs)}</strong>
@@ -421,7 +478,7 @@ function renderMediaDetail(account) {
 
       return `
         <button class="detail-media-frame" type="button" data-action="preview-media" data-index="${index}">
-          <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || account.title)}" loading="lazy" />
+          <img src="${escapeHtml(optimizedImageUrl(item.url, 1280, 82))}" alt="${escapeHtml(item.name || account.title)}" loading="${index === 0 ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${index === 0 ? 'high' : 'auto'}" />
         </button>
       `;
     })
@@ -527,8 +584,8 @@ function renderSell() {
               <button class="${platform.slug === selectedSlug ? 'selected' : ''}" type="button" data-action="select-sale-platform" data-slug="${escapeHtml(platform.slug)}">
                 <span style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
                   ${
-                    platform.image_url
-                      ? `<img src="${escapeHtml(platform.image_url)}" alt="" loading="lazy" />`
+            platform.image_url
+                      ? `<img src="${escapeHtml(platform.image_url)}" alt="" loading="lazy" decoding="async" />`
                       : escapeHtml(initials(platform.title))
                   }
                 </span>
@@ -556,7 +613,7 @@ function renderPendingFiles() {
           ${
             item.type === 'video'
               ? `<video src="${escapeHtml(item.url)}" muted playsinline preload="metadata"></video>`
-              : `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.file.name)}" />`
+              : `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.file.name)}" decoding="async" />`
           }
           <button type="button" data-action="remove-file" data-id="${escapeHtml(item.id)}" aria-label="O'chirish">×</button>
           <span>${escapeHtml(sizeLabel(item.file.size))}</span>
@@ -601,6 +658,7 @@ function renderError(message = state.error) {
 function renderTelegramServices() {
   const activeKey = TELEGRAM_SECTIONS[state.telegramSection] ? state.telegramSection : 'nft';
   const section = TELEGRAM_SECTIONS[activeKey];
+  const listings = state.telegramListings[activeKey] || [];
 
   return `
     <section class="telegram-hub">
@@ -622,12 +680,58 @@ function renderTelegramServices() {
         </div>
         <h2>${escapeHtml(section.headline)}</h2>
         <p>${escapeHtml(section.copy)}</p>
-        <div class="service-actions">
-          <button class="primary-button" type="button" data-action="telegram-service-contact" data-service="${escapeHtml(activeKey)}" data-intent="buy">Sotib olish</button>
-          <button class="secondary-button" type="button" data-action="telegram-service-contact" data-service="${escapeHtml(activeKey)}" data-intent="sell">Sotish</button>
-        </div>
+        <button class="primary-button" type="button" data-action="toggle-telegram-form">Sotish</button>
       </article>
+
+      ${state.telegramFormOpen ? renderTelegramListingForm(activeKey, section) : ''}
+
+      <section class="telegram-list" id="telegramListings">
+        ${
+          state.telegramLoading
+            ? renderSkeletonGrid('account')
+            : state.telegramError
+              ? renderError(state.telegramError)
+              : listings.length
+                ? listings.map((listing) => renderTelegramListingCard(listing, section)).join('')
+                : `<div class="empty-state telegram-empty"><strong>${escapeHtml(section.empty)}</strong><p>Yangi e'lon birinchi bo'lib shu yerda chiqadi.</p></div>`
+        }
+      </section>
     </section>
+  `;
+}
+
+function renderTelegramListingForm(activeKey, section) {
+  return `
+    <form class="telegram-listing-form" id="telegramListingForm">
+      <input type="hidden" name="listingType" value="${escapeHtml(activeKey)}" />
+      <label>
+        <span>${escapeHtml(section.linkLabel)}</span>
+        <input name="listingLink" type="text" maxlength="220" autocomplete="off" required placeholder="${escapeHtml(section.placeholder)}" />
+      </label>
+      <label>
+        <span>Narx</span>
+        <input name="price" type="text" inputmode="numeric" required placeholder="1 000 000" />
+      </label>
+      <p class="form-status" id="telegramFormStatus"></p>
+      <button class="primary-button" type="submit">Sotuvga qo'yish</button>
+    </form>
+  `;
+}
+
+function renderTelegramListingCard(listing, section) {
+  const seller = listing.seller_username ? `@${String(listing.seller_username).replace(/^@/, '')}` : listing.seller_name || 'Sotuvchi';
+  return `
+    <article class="telegram-listing-card" style="--accent:${escapeHtml(section.accent)}">
+      <div class="telegram-listing-main">
+        <span>${escapeHtml(section.label)}</span>
+        <strong>${escapeHtml(listing.title)}</strong>
+        <small>${escapeHtml(seller)}</small>
+      </div>
+      <div class="telegram-listing-side">
+        <b>${formatPrice(listing.price_uzs)}</b>
+        <button type="button" data-action="buy-telegram-listing" data-id="${escapeHtml(listing.id)}">Sotib olish</button>
+      </div>
+    </article>
   `;
 }
 
@@ -704,8 +808,10 @@ async function openPlatform(slug) {
       state.route = 'telegram';
       state.tab = 'store';
       state.loading = false;
+      state.telegramFormOpen = false;
       render();
     });
+    await loadTelegramListings(state.telegramSection);
     return;
   }
 
@@ -772,6 +878,11 @@ async function refreshCurrent() {
     return;
   }
 
+  if (state.route === 'telegram') {
+    await loadTelegramListings(state.telegramSection);
+    return;
+  }
+
   await loadPlatforms();
 }
 
@@ -817,8 +928,15 @@ function setTelegramSection(section) {
 
   withRenderTransition(() => {
     state.telegramSection = section;
+    state.telegramFormOpen = false;
     render();
   });
+  loadTelegramListings(section);
+}
+
+function toggleTelegramForm() {
+  state.telegramFormOpen = !state.telegramFormOpen;
+  render();
 }
 
 function setSalePlatform(slug) {
@@ -983,6 +1101,20 @@ function setFormBusy(isBusy, message = '') {
   status.textContent = message;
 }
 
+function setTelegramFormBusy(isBusy, message = '') {
+  const form = document.querySelector('#telegramListingForm');
+  if (!form) return;
+
+  const button = form.querySelector('button[type="submit"]');
+  const status = form.querySelector('#telegramFormStatus');
+  if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent;
+
+  form.classList.toggle('is-busy', isBusy);
+  button.disabled = isBusy;
+  button.textContent = isBusy ? "Ma'lumotlar yuklanmoqda..." : button.dataset.idleLabel;
+  status.textContent = message;
+}
+
 async function uploadMediaFile(item, index, total) {
   setFormBusy(true, `Media yuklanmoqda: ${index}/${total}`);
 
@@ -1017,6 +1149,25 @@ async function uploadMediaFile(item, index, total) {
     type: signed.type,
     name: item.file.name
   };
+}
+
+async function uploadMediaFiles(files) {
+  const media = [];
+  let uploadedCount = 0;
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(3, files.length) }, async () => {
+    while (cursor < files.length) {
+      const index = cursor;
+      cursor += 1;
+      const uploaded = await uploadMediaFile(files[index], index + 1, files.length);
+      media[index] = uploaded;
+      uploadedCount += 1;
+      setFormBusy(true, `Media yuklanmoqda: ${uploadedCount}/${files.length}`);
+    }
+  });
+
+  await Promise.all(workers);
+  return media.filter(Boolean);
 }
 
 async function submitSale(event) {
@@ -1056,12 +1207,7 @@ async function submitSale(event) {
       setFormBusy(true, 'Tekshirilmoqda...');
     }
 
-    const media = [];
-
-    for (let index = 0; index < state.pendingFiles.length; index += 1) {
-      const uploaded = await uploadMediaFile(state.pendingFiles[index], index + 1, state.pendingFiles.length);
-      media.push(uploaded);
-    }
+    const media = await uploadMediaFiles(state.pendingFiles);
 
     setFormBusy(true, "Sotuvga qo'yilmoqda...");
     const payload = await api('/api/accounts', {
@@ -1101,6 +1247,54 @@ async function submitSale(event) {
   }
 }
 
+async function submitTelegramListing(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.('#telegramListingForm');
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const formData = new FormData(form);
+  const listingType = String(formData.get('listingType') || state.telegramSection);
+  const listingLink = String(formData.get('listingLink') || '').trim();
+  const price = parsePrice(formData.get('price'));
+
+  if (!listingLink) {
+    showToast('Link yoki username kiriting.');
+    form.elements.listingLink.focus();
+    return;
+  }
+
+  if (!price || price <= 0) {
+    showToast("Narx kiritilmasa, e'lon sotuvga qo'yilmaydi.");
+    form.elements.price.focus();
+    return;
+  }
+
+  try {
+    setTelegramFormBusy(true, "Sotuvga qo'yilmoqda...");
+    const payload = await api('/api/accounts', {
+      method: 'POST',
+      body: {
+        platformSlug: 'telegram',
+        listingType,
+        listingLink,
+        price
+      }
+    });
+
+    state.telegramListings = {
+      ...state.telegramListings,
+      [listingType]: [payload.account, ...(state.telegramListings[listingType] || [])]
+    };
+    state.telegramFormOpen = false;
+    form.reset();
+    showToast("E'lon sotuvga qo'yildi.");
+    render();
+  } catch (error) {
+    setTelegramFormBusy(false, '');
+    showToast(error.message);
+  }
+}
+
 async function openAdminWithText(text, toastMessage = 'Xabar matni tayyor. Chat ochilmoqda.') {
   try {
     await navigator.clipboard?.writeText(text);
@@ -1136,17 +1330,37 @@ async function handleBuy() {
   await openAdminWithText(buyText(account));
 }
 
-function telegramServiceText(serviceKey, intent) {
-  const service = TELEGRAM_SECTIONS[serviceKey] || TELEGRAM_SECTIONS.nft;
-  const action = intent === 'sell' ? 'sotmoqchiman' : 'sotib olmoqchiman';
-  return `Assalomu alaykum, ${service.headline} ${action}. @${state.config.botUsername} mini appidan admin profiliga shu maqsadda o'tdim: ${service.headline} ${action}.`;
+function findTelegramListing(id) {
+  return Object.values(state.telegramListings)
+    .flat()
+    .find((listing) => listing.id === id) || null;
 }
 
-async function handleTelegramServiceContact(control) {
-  const service = control.dataset.service || state.telegramSection;
-  const intent = control.dataset.intent || 'buy';
-  const text = telegramServiceText(service, intent);
-  await openAdminWithText(text, 'Maqsad clipboardga yozildi. Admin chat ochilmoqda.');
+function openTelegramProfile(username) {
+  const clean = String(username || '').replace(/^@/, '').trim();
+  if (!clean) {
+    showToast('Sotuvchi username topilmadi.');
+    return;
+  }
+
+  const httpsLink = `https://t.me/${clean}`;
+  const tgLink = `tg://resolve?domain=${clean}`;
+
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(httpsLink);
+    return;
+  }
+
+  window.location.href = tgLink;
+  window.setTimeout(() => {
+    window.open(httpsLink, '_blank', 'noopener,noreferrer');
+  }, 450);
+}
+
+function handleTelegramListingBuy(id) {
+  const listing = findTelegramListing(id);
+  if (!listing) return;
+  openTelegramProfile(listing.seller_username);
 }
 
 function openPreview(index) {
@@ -1171,6 +1385,7 @@ app.addEventListener('click', async (event) => {
   if (action === 'open-account') openAccount(control.dataset.id);
   if (action === 'set-account-status') await setAccountStatus(control.dataset.status);
   if (action === 'set-telegram-section') setTelegramSection(control.dataset.section);
+  if (action === 'toggle-telegram-form') toggleTelegramForm();
   if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
   if (action === 'lookup-account') await lookupAccount();
   if (action === 'back') goBack();
@@ -1179,7 +1394,7 @@ app.addEventListener('click', async (event) => {
   if (action === 'tab-sell') switchTab('sell');
   if (action === 'remove-file') removePendingFile(control.dataset.id);
   if (action === 'buy-account') await handleBuy();
-  if (action === 'telegram-service-contact') await handleTelegramServiceContact(control);
+  if (action === 'buy-telegram-listing') handleTelegramListingBuy(control.dataset.id);
   if (action === 'preview-media') openPreview(control.dataset.index);
   if (action === 'close-lightbox') {
     state.lightbox = null;
@@ -1202,6 +1417,10 @@ app.addEventListener('input', (event) => {
 app.addEventListener('submit', (event) => {
   if (event.target.id === 'sellForm') {
     submitSale(event);
+  }
+
+  if (event.target.id === 'telegramListingForm') {
+    submitTelegramListing(event);
   }
 });
 
@@ -1228,5 +1447,4 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', set
 
 setTelegramChrome();
 render();
-await loadConfig();
-await loadPlatforms();
+await Promise.all([loadConfig(), loadPlatforms()]);

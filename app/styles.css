@@ -820,6 +820,120 @@ button {
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.05);
 }
 
+.telegram-listing-form {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.telegram-listing-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.telegram-listing-form label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.telegram-listing-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 13px;
+  outline: none;
+}
+
+.telegram-listing-form input:focus {
+  border-color: color-mix(in srgb, var(--success), var(--line) 35%);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success), transparent 84%);
+}
+
+.telegram-listing-form.is-busy {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.telegram-list {
+  display: grid;
+  gap: 10px;
+}
+
+.telegram-listing-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.07);
+}
+
+.telegram-listing-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.telegram-listing-main span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.telegram-listing-main strong {
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telegram-listing-main small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.telegram-listing-side {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.telegram-listing-side b {
+  color: color-mix(in srgb, var(--primary), var(--text) 18%);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.telegram-listing-side button {
+  min-height: 34px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.telegram-empty {
+  min-height: 220px;
+}
+
 .empty-state {
   display: grid;
   gap: 12px;

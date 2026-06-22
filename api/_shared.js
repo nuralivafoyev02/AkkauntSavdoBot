@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 export const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'account-media';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const LISTING_TYPE_MARKER = /^@@listing_type:(nft|username)@@\n?/;
 
 let supabaseClient;
 let supabaseModulePromise;
@@ -95,15 +96,23 @@ export function parsePriceUz(input) {
 
 export function publicAccount(row) {
   const createdAt = row.created_at || new Date().toISOString();
+  const rawDescription = row.description || '';
+  const markerMatch = String(rawDescription).match(LISTING_TYPE_MARKER);
+  const listingType = row.listing_type || markerMatch?.[1] || null;
+  const description = markerMatch ? String(rawDescription).replace(LISTING_TYPE_MARKER, '') : rawDescription;
+
   return {
     id: row.id,
     platform_slug: row.platform_slug,
     title: row.title,
-    description: row.description,
+    description,
+    listing_type: listingType,
     account_game_id: row.account_game_id || null,
     account_server_id: row.account_server_id || null,
     account_nickname: row.account_nickname || null,
     account_region: row.account_region || null,
+    seller_username: row.seller_username || null,
+    seller_name: row.seller_name || null,
     price_uzs: Number(row.price_uzs || 0),
     status: row.status,
     is_top: Boolean(row.is_top),

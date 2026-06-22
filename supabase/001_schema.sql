@@ -19,6 +19,7 @@ create table if not exists public.accounts (
   account_server_id text,
   account_nickname text,
   account_region text,
+  listing_type text check (listing_type is null or listing_type in ('nft', 'username')),
   price_uzs bigint not null check (price_uzs > 0),
   status text not null default 'available' check (status in ('available', 'sold', 'hidden')),
   seller_tg_id bigint,
@@ -30,6 +31,24 @@ create table if not exists public.accounts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.accounts
+  add column if not exists listing_type text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'accounts_listing_type_check'
+      and conrelid = 'public.accounts'::regclass
+  ) then
+    alter table public.accounts
+      add constraint accounts_listing_type_check
+      check (listing_type is null or listing_type in ('nft', 'username'));
+  end if;
+end;
+$$;
 
 create table if not exists public.bot_users (
   tg_user_id bigint primary key,
@@ -51,6 +70,10 @@ create index if not exists accounts_platform_status_created_idx
 
 create index if not exists accounts_status_created_idx
   on public.accounts (status, created_at desc);
+
+create index if not exists accounts_platform_listing_status_created_idx
+  on public.accounts (platform_slug, listing_type, status, created_at desc)
+  where listing_type is not null;
 
 create index if not exists accounts_game_id_idx
   on public.accounts (account_game_id)

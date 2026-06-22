@@ -13,8 +13,9 @@ import { mockAccounts } from './_mock.js';
 import { parseMobileLegendsId } from './account-lookup.js';
 
 const MAX_MEDIA_ITEMS = 10;
-const ACCOUNT_SELECT_BASE = 'id,platform_slug,title,description,price_uzs,status,is_top,media,created_at';
-const ACCOUNT_SELECT_META = `${ACCOUNT_SELECT_BASE},account_game_id,account_server_id,account_nickname,account_region`;
+const LISTING_TYPES = new Set(['nft', 'username']);
+const ACCOUNT_SELECT_BASE = 'id,platform_slug,title,description,price_uzs,status,is_top,media,created_at,seller_username,seller_name';
+const ACCOUNT_SELECT_META = `${ACCOUNT_SELECT_BASE},account_game_id,account_server_id,account_nickname,account_region,listing_type`;
 
 function cleanText(value, maxLength) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
@@ -26,6 +27,35 @@ function cleanDescription(value) {
 
 function isMissingColumnError(error) {
   return error?.code === '42703' || /column .* does not exist/i.test(error?.message || '');
+}
+
+function normalizeListingType(value) {
+  const type = String(value || '').trim().toLowerCase();
+  return LISTING_TYPES.has(type) ? type : '';
+}
+
+function cleanTelegramLink(value, listingType) {
+  const raw = cleanText(value, 220);
+  if (!raw) return '';
+
+  if (listingType === 'username') {
+    const username = raw
+      .replace(/^https?:\/\/t\.me\//i, '')
+      .replace(/^t\.me\//i, '')
+      .replace(/^@/, '')
+      .replace(/[/?#].*$/, '')
+      .trim();
+    return username ? `@${username}` : '';
+  }
+
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^t\.me\//i.test(raw)) return `https://${raw}`;
+  return raw;
+}
+
+function listingDescription(listingType, link) {
+  const label = listingType === 'username' ? 'Telegram username' : 'Telegram NFT';
+  return `@@listing_type:${listingType}@@\n${label}: ${link}`;
 }
 
 function cleanMedia(media) {
@@ -48,6 +78,7 @@ async function listAccounts(req, res) {
   const id = url.searchParams.get('id');
   const statusParam = url.searchParams.get('status');
   const status = ['available', 'sold'].includes(statusParam) ? statusParam : 'available';
+  const listingType = normalizeListingType(url.searchParams.get('listingType') || url.searchParams.get('listing_type'));
 
   const supabase = await getSupabase();
   if (!supabase) {
@@ -55,6 +86,7 @@ async function listAccounts(req, res) {
     if (platform) accounts = accounts.filter((account) => account.platform_slug === platform);
     if (id) accounts = accounts.filter((account) => account.id === id);
     accounts = accounts.filter((account) => account.status === status);
+    if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
 
     sendJson(res, 200, {
       demo: true,
@@ -73,19 +105,36 @@ async function listAccounts(req, res) {
 
     if (platform) query = query.eq('platform_slug', platform);
     if (id) query = query.eq('id', id);
+    if (listingType) query = query.eq('listing_type', listingType);
     return query;
   }
 
   let { data, error } = await buildQuery(ACCOUNT_SELECT_META);
   if (error && isMissingColumnError(error)) {
-    ({ data, error } = await buildQuery(ACCOUNT_SELECT_BASE));
+    function buildCompatQuery(select) {
+      let query = supabase
+        .from('accounts')
+        .select(select)
+        .eq('status', status)
+        .order('is_top', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (platform) query = query.eq('platform_slug', platform);
+      if (id) query = query.eq('id', id);
+      return query;
+    }
+
+    ({ data, error } = await buildCompatQuery(ACCOUNT_SELECT_BASE));
   }
 
   if (error) throw error;
 
+  let accounts = (data || []).map(publicAccount);
+  if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
+
   sendJson(res, 200, {
     demo: false,
-    accounts: (data || []).map(publicAccount)
+    accounts
   });
 }
 
@@ -94,6 +143,8 @@ async function createAccount(req, res) {
   const body = await readJson(req);
 
   const platformSlug = cleanText(body.platformSlug || body.platform_slug, 80);
+  const listingType = normalizeListingType(body.listingType || body.listing_type);
+  const listingLink = cleanTelegramLink(body.listingLink || body.listing_link || body.accountIdRaw || body.account_id_raw, listingType);
   const accountIdRaw = cleanText(body.accountIdRaw || body.account_id_raw, 80);
   let accountGameId = cleanText(body.accountGameId || body.account_game_id, 40);
   let accountServerId = cleanText(body.accountServerId || body.account_server_id, 40);
@@ -107,6 +158,27 @@ async function createAccount(req, res) {
   if (!platformSlug) {
     sendJson(res, 422, { error: 'Platformani tanlang.' });
     return;
+  }
+
+  if (platformSlug === 'telegram') {
+    if (!listingType) {
+      sendJson(res, 422, { error: 'Telegram bo\'limini tanlang.' });
+      return;
+    }
+
+    if (!listingLink) {
+      sendJson(res, 422, { error: listingType === 'username' ? 'Username kiriting.' : 'NFT linkini kiriting.' });
+      return;
+    }
+
+    if (!user.username) {
+      sendJson(res, 422, { error: 'Sotuvchi profili ochilishi uchun Telegram username yoqilgan bo\'lishi kerak.' });
+      return;
+    }
+
+    title = listingLink;
+    accountNickname = listingType === 'username' ? listingLink : '';
+    accountRegion = listingType === 'nft' ? 'NFT' : 'Username';
   }
 
   if (platformSlug === 'mobile-legends') {
@@ -126,7 +198,7 @@ async function createAccount(req, res) {
     return;
   }
 
-  if (!description) {
+  if (platformSlug !== 'telegram' && !description) {
     sendJson(res, 422, { error: "Akkaunt haqida to'liq ma'lumot kiriting." });
     return;
   }
@@ -142,11 +214,14 @@ async function createAccount(req, res) {
       id: `local-${Date.now()}`,
       platform_slug: platformSlug,
       title,
-      description,
+      description: platformSlug === 'telegram' ? listingDescription(listingType, listingLink) : description,
+      listing_type: platformSlug === 'telegram' ? listingType : null,
       account_game_id: accountGameId || null,
       account_server_id: accountServerId || null,
       account_nickname: accountNickname || null,
       account_region: accountRegion || null,
+      seller_username: user.username || null,
+      seller_name: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || null,
       price_uzs: priceUz,
       status: 'available',
       is_top: false,
@@ -166,7 +241,7 @@ async function createAccount(req, res) {
   const insertPayload = {
     platform_slug: platformSlug,
     title,
-    description,
+    description: platformSlug === 'telegram' ? listingDescription(listingType, listingLink) : description,
     price_uzs: priceUz,
     status: 'available',
     seller_tg_id: user.id || null,
@@ -176,13 +251,16 @@ async function createAccount(req, res) {
     account_server_id: accountServerId || null,
     account_nickname: accountNickname || null,
     account_region: accountRegion || null,
+    listing_type: platformSlug === 'telegram' ? listingType : null,
     media
   };
 
   const baseInsertPayload = {
     platform_slug: insertPayload.platform_slug,
     title: insertPayload.title,
-    description: [
+    description: platformSlug === 'telegram'
+      ? listingDescription(listingType, listingLink)
+      : [
       accountNickname || accountRegion
         ? `Nik: ${accountNickname || '-'}\nRegion: ${accountRegion || '-'}\nID: ${accountGameId || accountIdRaw || '-'}${accountServerId ? ` (${accountServerId})` : ''}\n`
         : '',
