@@ -2,7 +2,7 @@ import { allowMethods, getSupabase, publicAccount, sendError, sendJson } from '.
 import { mockAccounts, mockPlatforms } from './_mock.js';
 
 const PLATFORM_IMAGES = {
-  'free-fire': 'https://upload.wikimedia.org/wikipedia/en/thumb/3/38/Free_Fire_New_Logo.svg/250px-Free_Fire_New_Logo.svg.png',
+  'free-fire': '/assets/free-fire.png',
   'mobile-legends': '/assets/mobile-legends-5v5.png',
   'pubg-mobile': 'https://www.pubgmobile.com/common/images/icon_logo.jpg',
   steam: 'https://cdn.simpleicons.org/steam/ffffff',

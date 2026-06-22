@@ -4,7 +4,7 @@ export const mockPlatforms = [
     title: 'Free Fire',
     subtitle: 'Battle royale akkauntlari',
     accent_color: '#ff5a1f',
-    image_url: 'https://upload.wikimedia.org/wikipedia/en/thumb/3/38/Free_Fire_New_Logo.svg/250px-Free_Fire_New_Logo.svg.png',
+    image_url: '/assets/free-fire.png',
     sort_order: 10,
     count: 1
   },

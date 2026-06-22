@@ -317,8 +317,9 @@ function renderHeader() {
 
 function renderPlatformVisual(platform) {
   const label = initials(platform.title);
+  const slugClass = String(platform.slug || '').replace(/[^a-z0-9-]/gi, '');
   return `
-    <div class="platform-visual" style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
+    <div class="platform-visual platform-visual--${escapeHtml(slugClass)}" style="--accent:${escapeHtml(platform.accent_color || '#ff5a1f')}">
       ${
         platform.image_url
           ? `<img src="${escapeHtml(platform.image_url)}" alt="${escapeHtml(platform.title)}" loading="lazy" decoding="async" />`
