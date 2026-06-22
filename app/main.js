@@ -1117,7 +1117,7 @@ function renderProfile() {
   const username = user.username ? `@${user.username}` : 'username yo\'q';
   const roleLabel = isSuperAdmin() ? 'Superadmin' : isAdmin() ? 'Admin' : 'User';
   const subscriptionCopy = user.is_premium ? 'Premium · Obuna bo\'lgan' : 'Oddiy tarif · Faol';
-  const groupCopy = state.config.telegramGroupUrl ? 'Guruh ulangan' : 'Admin panel orqali biriktiriladi';
+  const groupCopy = state.config.telegramGroupUrl ? 'Savdo guruhi' : 'Sotuv guruhi ulanmagan';
 
   return `
     <section class="profile-view">
@@ -1156,12 +1156,12 @@ function renderProfile() {
           </div>
           <i aria-hidden="true">${biIcon('chevron-right')}</i>
         </button>
-        <button class="settings-row" type="button" data-action="usd-rate-info">
+        <button class="settings-row is-disabled" type="button" data-action="usd-rate-info" disabled>
           <span aria-hidden="true">${biIcon('currency-dollar')}</span>
           <div>
             <strong>USD Kurs</strong>
           </div>
-          <i aria-hidden="true">${biIcon('chevron-right')}</i>
+          ${renderSoonBadge()}
         </button>
         <button class="settings-row" type="button" data-action="${isAdmin() ? 'open-platform-manager' : 'tab-store'}">
           <span aria-hidden="true">${biIcon('folder2-open')}</span>

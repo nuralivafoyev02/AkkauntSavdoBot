@@ -1576,7 +1576,7 @@ img.profile-avatar {
 }
 
 .settings-row.is-disabled .soon-badge {
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--muted);
 }
 
