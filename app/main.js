@@ -18,6 +18,7 @@ const state = {
   telegramLoading: false,
   telegramError: '',
   telegramFormOpen: false,
+  telegramImage: null,
   accountsRequestId: 0,
   accountStatus: 'available',
   telegramSection: 'nft',
@@ -659,6 +660,7 @@ function renderTelegramServices() {
   const activeKey = TELEGRAM_SECTIONS[state.telegramSection] ? state.telegramSection : 'nft';
   const section = TELEGRAM_SECTIONS[activeKey];
   const listings = state.telegramListings[activeKey] || [];
+  const fabLabel = state.telegramFormOpen ? 'Yopish' : 'Sotish';
 
   return `
     <section class="telegram-hub">
@@ -680,7 +682,6 @@ function renderTelegramServices() {
         </div>
         <h2>${escapeHtml(section.headline)}</h2>
         <p>${escapeHtml(section.copy)}</p>
-        <button class="primary-button" type="button" data-action="toggle-telegram-form">Sotish</button>
       </article>
 
       ${state.telegramFormOpen ? renderTelegramListingForm(activeKey, section) : ''}
@@ -696,18 +697,24 @@ function renderTelegramServices() {
                 : `<div class="empty-state telegram-empty"><strong>${escapeHtml(section.empty)}</strong><p>Yangi e'lon birinchi bo'lib shu yerda chiqadi.</p></div>`
         }
       </section>
+
+      <button class="telegram-fab ${state.telegramFormOpen ? 'is-open' : ''}" type="button" data-action="toggle-telegram-form" aria-label="${escapeHtml(fabLabel)}">
+        <span aria-hidden="true">${state.telegramFormOpen ? '×' : '+'}</span>
+        <strong>${escapeHtml(fabLabel)}</strong>
+      </button>
     </section>
   `;
 }
 
 function renderTelegramListingForm(activeKey, section) {
   return `
-    <form class="telegram-listing-form" id="telegramListingForm">
+    <form class="telegram-listing-form" id="telegramListingForm" style="--accent:${escapeHtml(section.accent)}">
       <input type="hidden" name="listingType" value="${escapeHtml(activeKey)}" />
       <label>
         <span>${escapeHtml(section.linkLabel)}</span>
         <input name="listingLink" type="text" maxlength="220" autocomplete="off" required placeholder="${escapeHtml(section.placeholder)}" />
       </label>
+      ${renderTelegramImageField(activeKey)}
       <label>
         <span>Narx</span>
         <input name="price" type="text" inputmode="numeric" required placeholder="1 000 000" />
@@ -718,10 +725,41 @@ function renderTelegramListingForm(activeKey, section) {
   `;
 }
 
+function renderTelegramImageField(activeKey = state.telegramSection) {
+  if (activeKey !== 'nft') return '';
+
+  const image = state.telegramImage;
+  return `
+    <div class="telegram-image-field ${image ? 'has-image' : ''}">
+      <input id="telegramImageInput" type="file" accept="image/*" />
+      <label for="telegramImageInput">
+        ${
+          image
+            ? `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.file.name)}" decoding="async" />`
+            : '<em aria-hidden="true">+</em>'
+        }
+        <strong>NFT rasmi</strong>
+        <small>Link preview chiqmasa, xaridor shu ko'rinishni ko'radi.</small>
+      </label>
+      ${image ? `<button type="button" data-action="remove-telegram-image" aria-label="Rasmni olib tashlash">×</button>` : ''}
+    </div>
+  `;
+}
+
 function renderTelegramListingCard(listing, section) {
   const seller = listing.seller_username ? `@${String(listing.seller_username).replace(/^@/, '')}` : listing.seller_name || 'Sotuvchi';
+  const media = firstMedia(listing);
+  const mediaUrl = media?.type === 'image' && media.url ? optimizedImageUrl(media.url, 180, 70) : '';
+
   return `
     <article class="telegram-listing-card" style="--accent:${escapeHtml(section.accent)}">
+      <div class="telegram-listing-thumb">
+        ${
+          mediaUrl
+            ? `<img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(listing.title)}" loading="lazy" decoding="async" />`
+            : `<span>${escapeHtml(initials(section.title))}</span>`
+        }
+      </div>
       <div class="telegram-listing-main">
         <span>${escapeHtml(section.label)}</span>
         <strong>${escapeHtml(listing.title)}</strong>
@@ -800,6 +838,7 @@ async function openPlatform(slug) {
   if (!platform) return;
 
   if (isServicePlatform(slug)) {
+    clearTelegramListingImage();
     withRenderTransition(() => {
       cancelAccountLoads();
       state.selectedPlatform = platform;
@@ -862,6 +901,7 @@ function goBack() {
   }
 
   if (state.route === 'telegram') {
+    clearTelegramListingImage();
     withRenderTransition(() => {
       cancelAccountLoads();
       state.route = 'platforms';
@@ -896,6 +936,7 @@ function switchTab(tab) {
       : state.saleDraft.platformSlug || 'mobile-legends';
 
   withRenderTransition(() => {
+    clearTelegramListingImage();
     cancelAccountLoads();
     state.tab = tab;
     state.route = tab === 'sell' ? 'sell' : 'platforms';
@@ -926,6 +967,7 @@ async function setAccountStatus(status) {
 function setTelegramSection(section) {
   if (!TELEGRAM_SECTIONS[section] || section === state.telegramSection) return;
 
+  clearTelegramListingImage();
   withRenderTransition(() => {
     state.telegramSection = section;
     state.telegramFormOpen = false;
@@ -935,6 +977,10 @@ function setTelegramSection(section) {
 }
 
 function toggleTelegramForm() {
+  if (state.telegramFormOpen) {
+    clearTelegramListingImage();
+  }
+
   state.telegramFormOpen = !state.telegramFormOpen;
   render();
 }
@@ -1078,6 +1124,49 @@ function removePendingFile(id) {
   refreshMediaPreview();
 }
 
+function clearTelegramListingImage() {
+  if (state.telegramImage?.url) {
+    URL.revokeObjectURL(state.telegramImage.url);
+    objectUrls.delete(state.telegramImage.url);
+  }
+
+  state.telegramImage = null;
+}
+
+function renderTelegramImagePreview() {
+  const field = document.querySelector('.telegram-image-field');
+  if (field) field.outerHTML = renderTelegramImageField(state.telegramSection);
+
+  const input = document.querySelector('#telegramImageInput');
+  if (input) input.value = '';
+}
+
+function setTelegramListingImage(files) {
+  const file = files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    showToast('NFT uchun faqat rasm tanlang.');
+    return;
+  }
+
+  if (file.size > state.config.maxImageBytes) {
+    showToast(`${file.name} juda katta. Limit: ${sizeLabel(state.config.maxImageBytes)}.`);
+    return;
+  }
+
+  clearTelegramListingImage();
+  const url = URL.createObjectURL(file);
+  objectUrls.add(url);
+  state.telegramImage = {
+    id: uid(),
+    file,
+    type: 'image',
+    url
+  };
+  renderTelegramImagePreview();
+}
+
 function parsePrice(value) {
   return Number(String(value || '').replace(/[^\d]/g, ''));
 }
@@ -1115,8 +1204,8 @@ function setTelegramFormBusy(isBusy, message = '') {
   status.textContent = message;
 }
 
-async function uploadMediaFile(item, index, total) {
-  setFormBusy(true, `Media yuklanmoqda: ${index}/${total}`);
+async function uploadMediaFile(item, index, total, setBusy = setFormBusy, label = 'Media yuklanmoqda') {
+  setBusy(true, `${label}: ${index}/${total}`);
 
   const signed = await api('/api/upload-url', {
     method: 'POST',
@@ -1151,7 +1240,7 @@ async function uploadMediaFile(item, index, total) {
   };
 }
 
-async function uploadMediaFiles(files) {
+async function uploadMediaFiles(files, setBusy = setFormBusy, label = 'Media yuklanmoqda') {
   const media = [];
   let uploadedCount = 0;
   let cursor = 0;
@@ -1159,10 +1248,10 @@ async function uploadMediaFiles(files) {
     while (cursor < files.length) {
       const index = cursor;
       cursor += 1;
-      const uploaded = await uploadMediaFile(files[index], index + 1, files.length);
+      const uploaded = await uploadMediaFile(files[index], index + 1, files.length, setBusy, label);
       media[index] = uploaded;
       uploadedCount += 1;
-      setFormBusy(true, `Media yuklanmoqda: ${uploadedCount}/${files.length}`);
+      setBusy(true, `${label}: ${uploadedCount}/${files.length}`);
     }
   });
 
@@ -1270,6 +1359,10 @@ async function submitTelegramListing(event) {
   }
 
   try {
+    const media = state.telegramImage
+      ? await uploadMediaFiles([state.telegramImage], setTelegramFormBusy, 'NFT rasmi yuklanmoqda')
+      : [];
+
     setTelegramFormBusy(true, "Sotuvga qo'yilmoqda...");
     const payload = await api('/api/accounts', {
       method: 'POST',
@@ -1277,7 +1370,8 @@ async function submitTelegramListing(event) {
         platformSlug: 'telegram',
         listingType,
         listingLink,
-        price
+        price,
+        media
       }
     });
 
@@ -1286,6 +1380,7 @@ async function submitTelegramListing(event) {
       [listingType]: [payload.account, ...(state.telegramListings[listingType] || [])]
     };
     state.telegramFormOpen = false;
+    clearTelegramListingImage();
     form.reset();
     showToast("E'lon sotuvga qo'yildi.");
     render();
@@ -1393,6 +1488,10 @@ app.addEventListener('click', async (event) => {
   if (action === 'tab-store') switchTab('store');
   if (action === 'tab-sell') switchTab('sell');
   if (action === 'remove-file') removePendingFile(control.dataset.id);
+  if (action === 'remove-telegram-image') {
+    clearTelegramListingImage();
+    renderTelegramImagePreview();
+  }
   if (action === 'buy-account') await handleBuy();
   if (action === 'buy-telegram-listing') handleTelegramListingBuy(control.dataset.id);
   if (action === 'preview-media') openPreview(control.dataset.index);
@@ -1405,6 +1504,10 @@ app.addEventListener('click', async (event) => {
 app.addEventListener('change', (event) => {
   if (event.target.id === 'mediaInput') {
     addPendingFiles(event.target.files || []);
+  }
+
+  if (event.target.id === 'telegramImageInput') {
+    setTelegramListingImage(event.target.files || []);
   }
 });
 
