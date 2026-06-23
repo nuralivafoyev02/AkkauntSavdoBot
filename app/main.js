@@ -455,8 +455,9 @@ function renderHeader() {
         <span aria-hidden="true">${biIcon('arrow-left')}</span>
       </button>
       <div class="app-chip">
-        <span aria-hidden="true">${biIcon('cash')}</span>
-        <strong>Geto Savdo</strong>
+        <!-- <span aria-hidden="true">${biIcon('cash')}</span> -->
+        <strong>Mobile</strong>
+        <span class="hub-style">Zone</span>
       </div>
       <button class="icon-button" type="button" data-action="refresh" aria-label="Yangilash">
         <span aria-hidden="true">${biIcon('arrow-repeat')}</span>
