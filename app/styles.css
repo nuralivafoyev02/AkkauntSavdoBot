@@ -621,7 +621,8 @@ button {
   margin-top: 11px;
 }
 
-.detail-meta span {
+.detail-meta span,
+.copy-token {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -631,12 +632,36 @@ button {
   font-weight: 900;
 }
 
+.copy-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+}
+
+.copy-token span {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.copy-token .bi-icon {
+  width: 13px;
+  height: 13px;
+}
+
 .detail-info p {
   margin: 16px 0 0;
   color: var(--text);
   font-size: 16px;
   font-weight: 850;
   line-height: 1.5;
+}
+
+.detail-actions {
+  display: grid;
+  gap: 8px;
 }
 
 .buy-button,
@@ -658,6 +683,33 @@ button {
   color: var(--muted);
   cursor: default;
   box-shadow: none;
+}
+
+.danger-button,
+.seller-profile-button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.danger-button {
+  border-color: color-mix(in srgb, var(--danger), var(--line) 34%);
+  background: color-mix(in srgb, var(--danger), var(--surface) 91%);
+  color: var(--danger);
+}
+
+.danger-button strong,
+.seller-profile-button strong {
+  font: inherit;
 }
 
 .sell-form {
@@ -1184,12 +1236,31 @@ button {
   text-transform: uppercase;
 }
 
-.telegram-listing-main strong {
+.telegram-title-copy {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  text-align: left;
+}
+
+.telegram-title-copy strong {
   overflow: hidden;
   font-size: 16px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.telegram-title-copy .bi-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
 }
 
 .telegram-listing-main small {
@@ -1219,6 +1290,25 @@ button {
   padding: 0 10px;
   font-size: 12px;
   font-weight: 950;
+}
+
+.telegram-listing-side .telegram-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--danger), var(--line) 36%);
+  background: color-mix(in srgb, var(--danger), var(--surface) 91%);
+  color: var(--danger);
+}
+
+.telegram-delete-button .bi-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.telegram-delete-button strong {
+  font: inherit;
 }
 
 .telegram-empty {
@@ -1704,6 +1794,13 @@ img.profile-avatar {
   margin: 0;
   font-size: 14px;
   font-weight: 850;
+}
+
+.seller-profile-button {
+  margin-top: 4px;
+  border-color: color-mix(in srgb, var(--success), var(--line) 38%);
+  background: color-mix(in srgb, var(--success), var(--surface) 88%);
+  color: color-mix(in srgb, var(--success), var(--text) 24%);
 }
 
 .admin-form {
@@ -2232,7 +2329,8 @@ img.profile-avatar {
     align-items: start;
   }
 
-  .buy-button {
+  .buy-button,
+  .detail-actions {
     grid-column: 1 / -1;
   }
 

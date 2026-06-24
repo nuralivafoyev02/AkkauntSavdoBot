@@ -2,6 +2,7 @@ import {
   allowMethods,
   getBaseUrl,
   getSupabase,
+  normalizeUsername,
   parsePriceUz,
   publicAccount,
   readJson,
@@ -16,6 +17,7 @@ import { parseMobileLegendsId } from './account-lookup.js';
 
 const MAX_MEDIA_ITEMS = 10;
 const LISTING_TYPES = new Set(['nft', 'username']);
+const VISIBLE_STATUSES = ['available', 'sold'];
 const ACCOUNT_SELECT_BASE = 'id,platform_slug,title,description,price_uzs,status,is_top,media,created_at,sold_at,seller_tg_id,seller_username,seller_name';
 const ACCOUNT_SELECT_META = `${ACCOUNT_SELECT_BASE},account_game_id,account_server_id,account_nickname,account_region,listing_type`;
 
@@ -34,6 +36,24 @@ function isMissingColumnError(error) {
 function normalizeListingType(value) {
   const type = String(value || '').trim().toLowerCase();
   return LISTING_TYPES.has(type) ? type : '';
+}
+
+function canManageAccount(account, viewer, role = {}) {
+  if (role.isAdmin) return true;
+  if (!account || !viewer) return false;
+
+  if (viewer.id && account.seller_tg_id && String(viewer.id) === String(account.seller_tg_id)) {
+    return true;
+  }
+
+  const viewerUsername = normalizeUsername(viewer.username);
+  return Boolean(viewerUsername && normalizeUsername(account.seller_username) === viewerUsername);
+}
+
+function accountForViewer(account, { includeSeller = false, viewer = null, role = {} } = {}) {
+  const item = publicAccount(account, { includeSeller });
+  item.can_delete = canManageAccount(account, viewer, role);
+  return item;
 }
 
 function cleanTelegramLink(value, listingType) {
@@ -119,14 +139,18 @@ async function listAccounts(req, res) {
     let rawAccounts = [...mockAccounts];
     if (platform) rawAccounts = rawAccounts.filter((account) => account.platform_slug === platform);
     if (id) rawAccounts = rawAccounts.filter((account) => account.id === id);
-    if (status !== 'all') rawAccounts = rawAccounts.filter((account) => account.status === status);
+    if (status === 'all') {
+      rawAccounts = rawAccounts.filter((account) => VISIBLE_STATUSES.includes(account.status));
+    } else {
+      rawAccounts = rawAccounts.filter((account) => account.status === status);
+    }
     if (scope === 'mine') {
       rawAccounts = rawAccounts.filter((account) => {
         const username = String(account.seller_username || '').replace(/^@/, '').toLowerCase();
         return Number(account.seller_tg_id ?? -1) === Number(viewer?.id ?? -2) || username === String(viewer?.username || '').toLowerCase();
       });
     }
-    let accounts = rawAccounts.map((account) => publicAccount(account, { includeSeller }));
+    let accounts = rawAccounts.map((account) => accountForViewer(account, { includeSeller, viewer, role }));
     if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
 
     sendJson(res, 200, {
@@ -151,7 +175,8 @@ async function listAccounts(req, res) {
       .order('is_top', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (status !== 'all') query = query.eq('status', status);
+    if (status === 'all') query = query.in('status', VISIBLE_STATUSES);
+    else query = query.eq('status', status);
     if (platform) query = query.eq('platform_slug', platform);
     if (id) query = query.eq('id', id);
     if (listingType) query = query.eq('listing_type', listingType);
@@ -168,7 +193,8 @@ async function listAccounts(req, res) {
         .order('is_top', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (status !== 'all') query = query.eq('status', status);
+      if (status === 'all') query = query.in('status', VISIBLE_STATUSES);
+      else query = query.eq('status', status);
       if (platform) query = query.eq('platform_slug', platform);
       if (id) query = query.eq('id', id);
       if (scope === 'mine' && viewer?.id) query = query.eq('seller_tg_id', viewer.id);
@@ -180,7 +206,7 @@ async function listAccounts(req, res) {
 
   if (error) throw error;
 
-  let accounts = (data || []).map((account) => publicAccount(account, { includeSeller }));
+  let accounts = (data || []).map((account) => accountForViewer(account, { includeSeller, viewer, role }));
   if (listingType) accounts = accounts.filter((account) => account.listing_type === listingType);
 
   sendJson(res, 200, {
@@ -263,7 +289,7 @@ async function createAccount(req, res) {
   const creatorRole = await resolveAdminRole(user, supabase);
   const includeSellerForCreator = creatorRole.isAdmin;
   if (!supabase) {
-    const created = publicAccount({
+    const created = accountForViewer({
       id: `local-${Date.now()}`,
       platform_slug: platformSlug,
       title,
@@ -280,7 +306,7 @@ async function createAccount(req, res) {
       is_top: false,
       media,
       created_at: new Date().toISOString()
-    }, { includeSeller: includeSellerForCreator });
+    }, { includeSeller: includeSellerForCreator, viewer: user, role: creatorRole });
 
     sendJson(res, 201, {
       demo: true,
@@ -352,16 +378,98 @@ async function createAccount(req, res) {
 
   sendJson(res, 201, {
     demo: false,
-    account: publicAccount(data, { includeSeller: includeSellerForCreator })
+    account: accountForViewer(data, { includeSeller: includeSellerForCreator, viewer: user, role: creatorRole })
+  });
+}
+
+async function deleteAccount(req, res) {
+  const user = requireTelegramUser(req);
+  const url = new URL(req.url, getBaseUrl(req));
+  let id = String(url.searchParams.get('id') || '').trim();
+
+  if (!id) {
+    const body = await readJson(req);
+    id = String(body.id || body.accountId || '').trim();
+  }
+
+  if (!id) {
+    sendJson(res, 422, { error: 'Akkaunt ID topilmadi.' });
+    return;
+  }
+
+  const supabase = await getSupabase();
+  const role = await resolveAdminRole(user, supabase);
+
+  if (!supabase) {
+    const account = mockAccounts.find((item) => item.id === id && item.status !== 'hidden');
+    if (!account) {
+      sendJson(res, 404, { error: 'Akkaunt topilmadi.' });
+      return;
+    }
+
+    if (!canManageAccount(account, user, role)) {
+      sendJson(res, 403, { error: "Bu e'lonni o'chirishga ruxsat yo'q." });
+      return;
+    }
+
+    sendJson(res, 200, {
+      demo: true,
+      account: {
+        id,
+        status: 'hidden'
+      }
+    });
+    return;
+  }
+
+  const { data: account, error: readError } = await supabase
+    .from('accounts')
+    .select('id,status,seller_tg_id,seller_username')
+    .eq('id', id)
+    .neq('status', 'hidden')
+    .limit(1)
+    .maybeSingle();
+
+  if (readError) throw readError;
+
+  if (!account) {
+    sendJson(res, 404, { error: 'Akkaunt topilmadi.' });
+    return;
+  }
+
+  if (!canManageAccount(account, user, role)) {
+    sendJson(res, 403, { error: "Bu e'lonni o'chirishga ruxsat yo'q." });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('accounts')
+    .update({
+      status: 'hidden'
+    })
+    .eq('id', id)
+    .select('id,status')
+    .single();
+
+  if (error) throw error;
+
+  sendJson(res, 200, {
+    demo: false,
+    account: data
   });
 }
 
 export default async function handler(req, res) {
-  if (!allowMethods(req, res, ['GET', 'POST'])) return;
+  if (!allowMethods(req, res, ['GET', 'POST', 'DELETE'])) return;
 
   try {
     if (req.method === 'GET') {
       await listAccounts(req, res);
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      await deleteAccount(req, res);
       return;
     }
 

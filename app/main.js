@@ -95,6 +95,7 @@ const BI_ICONS = {
   cash: '<path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/><path d="M0 4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V6a2 2 0 0 1-2-2z"/>',
   'chevron-right': '<path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>',
   clock: '<path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>',
+  clipboard: '<path d="M10 1.5v1h1.5A1.5 1.5 0 0 1 13 4v9.5A1.5 1.5 0 0 1 11.5 15h-7A1.5 1.5 0 0 1 3 13.5V4a1.5 1.5 0 0 1 1.5-1.5H6v-1A.5.5 0 0 1 6.5 1h3a.5.5 0 0 1 .5.5m-3 0v1h2v-1zm-2.5 2A.5.5 0 0 0 4 4v9.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V4a.5.5 0 0 0-.5-.5H10v.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-.5z"/>',
   'currency-dollar': '<path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73z"/>',
   download: '<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5A1.1 1.1 0 0 0 2.1 14h11.8a1.1 1.1 0 0 0 1.1-1.1v-2.5a.5.5 0 0 1 1 0v2.5A2.1 2.1 0 0 1 13.9 15H2.1A2.1 2.1 0 0 1 0 12.9v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>',
   'folder2-open': '<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.734 15H3.266a2.5 2.5 0 0 1-2.481-2.19L.145 7.686A1.5 1.5 0 0 1 1 6.14zm1.5-.5a.5.5 0 0 0-.5.5V6h11.5a.5.5 0 0 0 .5-.5.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3zM1.138 7.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.488-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633a.5.5 0 0 0-.495.562"/>',
@@ -107,6 +108,7 @@ const BI_ICONS = {
   send: '<path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995-4.995-3.178a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11zM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>',
   'star-fill': '<path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187z"/>',
   'three-dots': '<path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3"/>',
+  trash: '<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1 0-2H5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1h2.5a1 1 0 0 1 1 1M4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>',
   'x-lg': '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>',
   'arrow-left': '<path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/>',
   'arrow-repeat': `<svg class="bi-icon" viewBox="0 0 16 16">
@@ -414,6 +416,77 @@ function showToast(message) {
   }, 2800);
 }
 
+async function copyText(text, message = 'Nusxalandi.') {
+  const value = String(text || '').trim();
+  if (!value) {
+    showToast('Nusxalash uchun matn topilmadi.');
+    return false;
+  }
+
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(value);
+    showToast(message);
+    return true;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.append(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+      showToast(message);
+      return true;
+    } catch {
+      showToast('Nusxalab bo\'lmadi.');
+      return false;
+    } finally {
+      textarea.remove();
+    }
+  }
+}
+
+function accountIdentifier(account) {
+  if (!account) return '';
+  if (account.account_game_id) {
+    return `${account.account_game_id}${account.account_server_id ? ` (${account.account_server_id})` : ''}`;
+  }
+  if (account.platform_slug === 'telegram') return account.title || '';
+  return String(account.title || '').match(/\d{4,}(?:\s*\(\d+\))?/)?.[0] || '';
+}
+
+function canDeleteAccount(account) {
+  if (!account) return false;
+  if (isAdmin() || account.can_delete) return true;
+  return state.history.accounts.some((item) => item.id === account.id);
+}
+
+function renderDeleteButton(account, className = 'danger-button') {
+  if (!canDeleteAccount(account)) return '';
+  return `
+    <button class="${escapeHtml(className)}" type="button" data-action="delete-account" data-id="${escapeHtml(account.id)}">
+      <span aria-hidden="true">${biIcon('trash')}</span>
+      <strong>O'chirish</strong>
+    </button>
+  `;
+}
+
+function renderCopyToken(account, label = 'ID') {
+  const identifier = accountIdentifier(account);
+  if (!identifier) return '';
+
+  return `
+    <button class="copy-token" type="button" data-action="copy-account-id" data-id="${escapeHtml(account.id)}" title="ID nusxalash">
+      <span>${escapeHtml(label)}: ${escapeHtml(identifier)}</span>
+      ${biIcon('clipboard')}
+    </button>
+  `;
+}
+
 function headerTitle() {
   if (state.route === 'sell') return 'Akkaunt sotish';
   if (state.route === 'history') return 'Tarix';
@@ -661,6 +734,10 @@ function renderSellerInfo(account) {
       <span>Admin uchun</span>
       <strong>Sotuvchi</strong>
       <p>${escapeHtml(bits.join(' · '))}</p>
+      <button class="seller-profile-button" type="button" data-action="open-seller-profile" data-id="${escapeHtml(account.id)}">
+        <span aria-hidden="true">${biIcon('person')}</span>
+        <strong>Telegram profilini ochish</strong>
+      </button>
     </section>
   `;
 }
@@ -669,6 +746,7 @@ function renderDetail() {
   const account = state.selectedAccount;
   if (!account) return renderError("Akkaunt topilmadi.");
   const isSold = account.status === 'sold';
+  const hasMeta = Boolean(account.account_nickname || account.account_region || accountIdentifier(account));
 
   return `
     <article class="detail-view">
@@ -683,11 +761,11 @@ function renderDetail() {
         </div>
         <strong class="detail-price">${formatPrice(account.price_uzs)}</strong>
         ${
-          accountMetaLine(account)
+          hasMeta
             ? `<div class="detail-meta">
                 ${account.account_nickname ? `<span>Nik: ${escapeHtml(account.account_nickname)}</span>` : ''}
                 ${account.account_region ? `<span>Region: ${escapeHtml(account.account_region)}</span>` : ''}
-                ${account.account_game_id ? `<span>ID: ${escapeHtml(account.account_game_id)}${account.account_server_id ? ` (${escapeHtml(account.account_server_id)})` : ''}</span>` : ''}
+                ${renderCopyToken(account)}
               </div>`
             : ''
         }
@@ -695,7 +773,10 @@ function renderDetail() {
         ${renderSellerInfo(account)}
       </section>
 
-      <button class="buy-button ${isSold ? 'is-disabled' : ''}" type="button" data-action="${isSold ? '' : 'buy-account'}" ${isSold ? 'disabled' : ''}>${isSold ? 'Sotilgan' : 'Sotib olish'}</button>
+      <section class="detail-actions">
+        <button class="buy-button ${isSold ? 'is-disabled' : ''}" type="button" data-action="${isSold ? '' : 'buy-account'}" ${isSold ? 'disabled' : ''}>${isSold ? 'Sotilgan' : 'Sotib olish'}</button>
+        ${renderDeleteButton(account)}
+      </section>
     </article>
   `;
 }
@@ -939,12 +1020,17 @@ function renderTelegramListingCard(listing, section) {
       </div>
       <div class="telegram-listing-main">
         <span>${escapeHtml(section.label)}</span>
-        <strong>${escapeHtml(listing.title)}</strong>
+        <button class="telegram-title-copy" type="button" data-action="copy-account-id" data-id="${escapeHtml(listing.id)}" title="ID nusxalash">
+          <strong>${escapeHtml(listing.title)}</strong>
+          ${biIcon('clipboard')}
+        </button>
         <small>${escapeHtml(sellerLine)}</small>
       </div>
       <div class="telegram-listing-side">
         <b>${formatPrice(listing.price_uzs)}</b>
         <button type="button" data-action="buy-telegram-listing" data-id="${escapeHtml(listing.id)}">Sotib olish</button>
+        ${isAdmin() ? `<button class="telegram-seller-button" type="button" data-action="open-seller-profile" data-id="${escapeHtml(listing.id)}">Profil</button>` : ''}
+        ${renderDeleteButton(listing, 'telegram-delete-button')}
       </div>
     </article>
   `;
@@ -2304,26 +2390,26 @@ function openTelegramTarget(raw) {
 }
 
 async function openAdminWithText(text, toastMessage = 'Xabar matni tayyor. Chat ochilmoqda.') {
-  try {
-    await navigator.clipboard?.writeText(text);
-  } catch {
-    // Clipboard is a convenience fallback only.
-  }
+  await copyText(text, toastMessage);
 
-  showToast(toastMessage);
   const admin = state.config.adminUsername.replace(/^@/, '');
-  const httpsLink = `https://t.me/${admin}?text=${encodeURIComponent(text)}`;
-  const tgLink = `tg://resolve?domain=${admin}&text=${encodeURIComponent(text)}`;
-
-  if (tg?.openTelegramLink) {
-    tg.openTelegramLink(httpsLink);
+  if (!admin) {
+    showToast('Admin username sozlanmagan.');
     return;
   }
 
+  const encodedText = encodeURIComponent(text);
+  const tgLink = `tg://resolve?domain=${admin}&text=${encodedText}`;
+  const httpsLink = `https://t.me/${admin}?text=${encodedText}`;
+
   window.location.href = tgLink;
   window.setTimeout(() => {
-    window.open(`https://t.me/${admin}`, '_blank', 'noopener,noreferrer');
-  }, 450);
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(httpsLink);
+      return;
+    }
+    window.open(httpsLink, '_blank', 'noopener,noreferrer');
+  }, 700);
 }
 
 async function handleBuy() {
@@ -2365,6 +2451,105 @@ function openTelegramProfile(username) {
   }, 450);
 }
 
+function openTelegramUserById(tgId) {
+  const id = String(tgId || '').trim();
+  if (!id) {
+    showToast('Sotuvchi Telegram ID topilmadi.');
+    return;
+  }
+
+  showToast('Telegram profil ochilmoqda.');
+  window.location.href = `tg://user?id=${encodeURIComponent(id)}`;
+}
+
+async function openSellerProfile(accountId) {
+  const account = findAccount(accountId);
+  if (account?.seller_username) {
+    openTelegramProfile(account.seller_username);
+    return;
+  }
+
+  if (account?.seller_tg_id) {
+    openTelegramUserById(account.seller_tg_id);
+    return;
+  }
+
+  try {
+    const contact = await api(`/api/seller-contact?id=${encodeURIComponent(accountId)}`);
+    if (contact.username) {
+      openTelegramProfile(contact.username);
+      return;
+    }
+    if (contact.seller_tg_id) {
+      openTelegramUserById(contact.seller_tg_id);
+      return;
+    }
+    showToast('Sotuvchi profili topilmadi.');
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function confirmDeleteAccount(account) {
+  const title = account?.platform_slug === 'telegram' ? "E'lon" : 'Akkaunt';
+  const message = `${title} rostdan o'chirilsinmi?`;
+
+  if (tg?.showConfirm) {
+    return new Promise((resolve) => tg.showConfirm(message, resolve));
+  }
+
+  return Promise.resolve(window.confirm(message));
+}
+
+function removeAccountFromState(id) {
+  state.accounts = state.accounts.filter((account) => account.id !== id);
+  state.history.accounts = state.history.accounts.filter((account) => account.id !== id);
+  state.telegramListings = Object.fromEntries(
+    Object.entries(state.telegramListings).map(([key, listings]) => [
+      key,
+      listings.filter((listing) => listing.id !== id)
+    ])
+  );
+
+  if (state.selectedAccount?.id === id) {
+    state.selectedAccount = null;
+    state.route = state.selectedPlatform ? (isServicePlatform(state.selectedPlatform.slug) ? 'telegram' : 'accounts') : 'history';
+  }
+}
+
+async function deleteAccount(id) {
+  const account = findAccount(id);
+  if (!account || !canDeleteAccount(account)) {
+    showToast("Bu e'lonni o'chirishga ruxsat yo'q.");
+    return;
+  }
+
+  if (!(await confirmDeleteAccount(account))) return;
+
+  try {
+    await api(`/api/accounts?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    removeAccountFromState(id);
+    await loadPlatforms();
+    showToast(account.platform_slug === 'telegram' ? "E'lon o'chirildi." : "Akkaunt o'chirildi.");
+    render();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function copyAccountIdentifier(id) {
+  const account = findAccount(id);
+  const identifier = accountIdentifier(account);
+  if (!identifier) {
+    showToast('Akkaunt ID topilmadi.');
+    return;
+  }
+
+  await copyText(identifier, 'ID nusxalandi.');
+}
+
 function csvCell(value) {
   return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
@@ -2402,12 +2587,7 @@ async function handleTelegramListingBuy(id) {
   const listing = findTelegramListing(id);
   if (!listing) return;
 
-  try {
-    const contact = await api(`/api/seller-contact?id=${encodeURIComponent(id)}`);
-    openTelegramProfile(contact.username);
-  } catch (error) {
-    showToast(error.message);
-  }
+  await openAdminWithText(buyText(listing));
 }
 
 function openPreview(index) {
@@ -2463,6 +2643,9 @@ app.addEventListener('click', async (event) => {
   if (action === 'tab-history') switchTab('history');
   if (action === 'tab-profile') switchTab('profile');
   if (action === 'delete-admin') await deleteAdmin(control.dataset.id);
+  if (action === 'delete-account') await deleteAccount(control.dataset.id);
+  if (action === 'copy-account-id') await copyAccountIdentifier(control.dataset.id);
+  if (action === 'open-seller-profile') await openSellerProfile(control.dataset.id);
   if (action === 'remove-file') removePendingFile(control.dataset.id);
   if (action === 'remove-telegram-image') {
     clearTelegramListingImage();
