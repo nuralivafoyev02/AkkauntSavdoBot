@@ -613,13 +613,23 @@ function renderAccountCover(account, index = 0) {
   if (firstMedia?.type === 'video') {
     innerHTML = `<video src="${escapeHtml(firstMedia.url)}" muted playsinline preload="metadata" loop autoplay></video>`;
   } else if (images.length > 1) {
-    const imagesHtml = images.map((img, i) => 
-      `<img src="${escapeHtml(optimizedImageUrl(img.url, 380, 65))}" alt="${escapeHtml(account.title)}" loading="${isEager && i === 0 ? 'eager' : 'lazy'}" decoding="async" />`
-    ).join('');
+    const imagesHtml = images.map((img, i) => {
+      const url = escapeHtml(optimizedImageUrl(img.url, 380, 65));
+      return `
+        <div class="slide-wrapper" style="background-image: url('${url}')">
+          <img src="${url}" alt="${escapeHtml(account.title)}" loading="${isEager && i === 0 ? 'eager' : 'lazy'}" decoding="async" />
+        </div>
+      `;
+    }).join('');
     const randomDelay = -(Math.random() * 5).toFixed(2);
     innerHTML = `<div class="slideshow-track slides-count-${images.length}" style="animation-delay: ${randomDelay}s">${imagesHtml}</div>`;
   } else if (images.length === 1) {
-    innerHTML = `<img src="${escapeHtml(optimizedImageUrl(images[0].url, 380, 65))}" alt="${escapeHtml(account.title)}" loading="${isEager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${isEager ? 'high' : 'auto'}" />`;
+    const url = escapeHtml(optimizedImageUrl(images[0].url, 380, 65));
+    innerHTML = `
+      <div class="slide-wrapper" style="background-image: url('${url}')">
+        <img src="${url}" alt="${escapeHtml(account.title)}" loading="${isEager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${isEager ? 'high' : 'auto'}" />
+      </div>
+    `;
   } else {
     innerHTML = renderGeneratedCover(account);
   }
