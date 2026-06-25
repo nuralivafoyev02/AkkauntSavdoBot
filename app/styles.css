@@ -485,6 +485,12 @@ button {
   background: #101114; /* Cinematic dark background */
 }
 
+.account-cover img {
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
 .slide-wrapper {
   flex: 0 0 100%;
   height: 100%;
