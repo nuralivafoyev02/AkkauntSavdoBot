@@ -167,16 +167,47 @@ async function saveBotUser(message) {
   if (error && !isMissingRelationError(error)) throw error;
 }
 
-function parseBroadcastCommand(text, message) {
-  const match = String(text || '').match(/^\/message(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+function parseBroadcastCommand(message) {
+  let text = message.text || message.caption || '';
+  const match = String(text || '').match(/^\/message(?:@\w+)?(?:\s+)?/i);
+
+  if (message.reply_to_message && match) {
+    return {
+      type: 'copy',
+      from_chat_id: message.chat.id,
+      message_id: message.reply_to_message.message_id
+    };
+  }
+
   if (!match) return null;
 
-  return (
-    match[1] ||
-    message.reply_to_message?.text ||
-    message.reply_to_message?.caption ||
-    ''
-  ).trim();
+  const prefixLength = match[0].length;
+  text = text.substring(prefixLength);
+  
+  if (!text && !message.photo && !message.video && !message.document && !message.audio && !message.animation && !message.voice && !message.sticker) {
+    return { type: 'empty' };
+  }
+
+  let entities = message.entities || message.caption_entities || [];
+  entities = entities
+    .filter(e => e.offset >= prefixLength)
+    .map(e => ({ ...e, offset: e.offset - prefixLength }));
+
+  if (message.text) {
+    return {
+      type: 'text',
+      text,
+      entities: entities.length ? entities : undefined
+    };
+  } else {
+    return {
+      type: 'copy_with_caption',
+      from_chat_id: message.chat.id,
+      message_id: message.message_id,
+      caption: text,
+      caption_entities: entities.length ? entities : undefined
+    };
+  }
 }
 
 async function markBotUserInactive(tgUserId) {
@@ -210,11 +241,28 @@ async function broadcastToUsers(text) {
 
     for (const user of users) {
       try {
-        await telegram('sendMessage', {
-          chat_id: user.chat_id,
-          text,
-          disable_web_page_preview: true
-        });
+        if (payload.type === 'copy') {
+          await telegram('copyMessage', {
+            chat_id: user.chat_id,
+            from_chat_id: payload.from_chat_id,
+            message_id: payload.message_id
+          });
+        } else if (payload.type === 'copy_with_caption') {
+          await telegram('copyMessage', {
+            chat_id: user.chat_id,
+            from_chat_id: payload.from_chat_id,
+            message_id: payload.message_id,
+            caption: payload.caption,
+            caption_entities: payload.caption_entities
+          });
+        } else if (payload.type === 'text') {
+          await telegram('sendMessage', {
+            chat_id: user.chat_id,
+            text: payload.text,
+            entities: payload.entities,
+            disable_web_page_preview: true
+          });
+        }
         sent += 1;
       } catch (error) {
         failed += 1;
@@ -296,7 +344,7 @@ async function handleMessage(message, req, backgroundTasks = []) {
   const chatType = message.chat.type;
   const text = String(message.text || '').trim();
   const soldMatch = text.match(/^(.{2,160})\s+sotildi$/i);
-  const broadcastText = parseBroadcastCommand(text, message);
+  const broadcastPayload = parseBroadcastCommand(message);
 
   if (chatType === 'private') {
     backgroundTasks.push({
@@ -311,11 +359,11 @@ async function handleMessage(message, req, backgroundTasks = []) {
 
   const senderIsAdmin = await isAdmin(message.from);
 
-  if (broadcastText !== null && senderIsAdmin) {
-    if (!broadcastText) {
+  if (broadcastPayload !== null && senderIsAdmin) {
+    if (broadcastPayload.type === 'empty') {
       await telegram('sendMessage', {
         chat_id: chatId,
-        text: "Xabar matnini ham yozing: /message Assalomu alaykum"
+        text: "Xabarni qanday yuborish kerak:\n1. Matn/rasm/videoga qo'shib: /message Assalomu alaykum\n2. Yoki stiker/xabarga /message deb reply (javob) qilib."
       });
       return;
     }
@@ -327,7 +375,7 @@ async function handleMessage(message, req, backgroundTasks = []) {
 
     let result;
     try {
-      result = await broadcastToUsers(broadcastText);
+      result = await broadcastToUsers(broadcastPayload);
     } catch (error) {
       if (isMissingRelationError(error)) {
         await telegram('sendMessage', {
