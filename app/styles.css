@@ -480,16 +480,16 @@ button {
 .account-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1.4 / 1;
   overflow: hidden;
-  background: var(--surface-2);
+  background: #101114; /* Cinematic dark background */
 }
 
 .account-cover img,
 .account-cover video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -502,7 +502,7 @@ button {
 .slideshow-track img {
   flex: 0 0 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .slides-count-2 {
