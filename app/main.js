@@ -2338,8 +2338,11 @@ async function deleteAdmin(id) {
   }
 }
 
-async function togglePlatformStatus(slug, isActive) {
+async function togglePlatformStatus(slug, isActive, control) {
   try {
+    if (control) control.disabled = true;
+    showToast('⏳ Saqlanmoqda...');
+
     await api('/api/platforms', {
       method: 'PATCH',
       body: {
@@ -2347,15 +2350,20 @@ async function togglePlatformStatus(slug, isActive) {
         isActive
       }
     });
+    
     state.adminPlatforms.items = state.adminPlatforms.items.map((platform) =>
       platform.slug === slug ? { ...platform, is_active: isActive } : platform
     );
     await loadPlatforms();
-    showToast(isActive ? 'Platforma yoqildi.' : 'Platforma userlardan yashirildi.');
-    render();
+    
+    showToast(isActive ? '✅ Platforma yoqildi.' : '✅ Platforma o\'chirildi.');
+    // Do not call render() here to prevent screen flickering
   } catch (error) {
-    showToast(error.message);
+    showToast('❌ Xatolik: ' + error.message);
+    if (control) control.checked = !isActive; // revert visually
     await loadAdminPlatforms();
+  } finally {
+    if (control) control.disabled = false;
   }
 }
 
@@ -2650,7 +2658,7 @@ app.addEventListener('click', async (event) => {
   }
   if (action === 'open-telegram-community') openTelegramTarget(state.config.telegramGroupUrl);
   if (action === 'open-platform-manager') await openPlatformManager();
-  if (action === 'toggle-platform-status') await togglePlatformStatus(control.dataset.slug, control.checked);
+  if (action === 'toggle-platform-status') await togglePlatformStatus(control.dataset.slug, control.checked, control);
   if (action === 'usd-rate-info') showToast('USD kurs bo\'limi tez kunda qo\'shiladi.');
   if (action === 'open-admin') await openAdminPanel();
   if (action === 'select-sale-platform') setSalePlatform(control.dataset.slug);
