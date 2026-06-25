@@ -480,7 +480,7 @@ button {
 .account-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.4 / 1;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background: #101114; /* Cinematic dark background */
 }
