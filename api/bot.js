@@ -303,6 +303,10 @@ async function handleMessage(message, req, backgroundTasks = []) {
       label: 'saveBotUser',
       task: () => saveBotUser(message)
     });
+
+    if (text === '/start') {
+      return greetingPayload(chatId, req);
+    }
   }
 
   const senderIsAdmin = await isAdmin(message.from);

@@ -178,6 +178,7 @@ function optimizedImageUrl(url, width = 640, quality = 72) {
     parsed.searchParams.set('width', String(width));
     parsed.searchParams.set('quality', String(quality));
     parsed.searchParams.set('resize', 'cover');
+    parsed.searchParams.set('format', 'webp');
     return parsed.toString();
   } catch {
     return url;
@@ -499,6 +500,8 @@ function headerTitle() {
   return 'Bosh menu';
 }
 
+const APP_INIT_TIME = Date.now();
+
 function renderHeader() {
   const canGoBack = state.route === 'accounts' || state.route === 'detail' || state.route === 'telegram' || state.route === 'admin' || state.route === 'platform-admin';
   const subtitle =
@@ -527,7 +530,7 @@ function renderHeader() {
       <button class="icon-button ${canGoBack ? '' : 'is-hidden'}" type="button" data-action="back" aria-label="Orqaga">
         <span aria-hidden="true">${biIcon('arrow-left')}</span>
       </button>
-      <div class="app-chip">
+      <div class="app-chip" style="--shimmer-delay: ${-((Date.now() - APP_INIT_TIME) % 5500)}ms;">
         <!-- <span aria-hidden="true">${biIcon('cash')}</span> -->
         <strong>Mobile</strong>
         <span class="hub-style">Zone</span>
@@ -599,20 +602,32 @@ function firstMedia(account) {
 }
 
 function renderAccountCover(account, index = 0) {
-  const media = firstMedia(account);
+  const images = (account.media || []).filter(item => item.type === 'image').slice(0, 3);
+  const firstMedia = account.media?.[0];
   const badge = account.status === 'sold' ? 'SOTILDI' : account.is_new ? 'NEW' : account.is_top ? 'TOP' : '';
   const badgeClass = account.status === 'sold' ? 'is-sold' : account.is_new ? 'is-new' : '';
   const isEager = index < 2;
 
+  let innerHTML = '';
+  
+  if (firstMedia?.type === 'video') {
+    innerHTML = `<video src="${escapeHtml(firstMedia.url)}" muted playsinline preload="metadata" loop autoplay></video>`;
+  } else if (images.length > 1) {
+    const imagesHtml = images.map((img, i) => 
+      `<img src="${escapeHtml(optimizedImageUrl(img.url, 380, 65))}" alt="${escapeHtml(account.title)}" loading="${isEager && i === 0 ? 'eager' : 'lazy'}" decoding="async" />`
+    ).join('');
+    const randomDelay = -(Math.random() * 5).toFixed(2);
+    innerHTML = `<div class="slideshow-track slides-count-${images.length}" style="animation-delay: ${randomDelay}s">${imagesHtml}</div>`;
+  } else if (images.length === 1) {
+    innerHTML = `<img src="${escapeHtml(optimizedImageUrl(images[0].url, 380, 65))}" alt="${escapeHtml(account.title)}" loading="${isEager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${isEager ? 'high' : 'auto'}" />`;
+  } else {
+    innerHTML = renderGeneratedCover(account);
+  }
+
   return `
     <div class="account-cover">
-      ${
-        media?.url
-          ? media.type === 'video'
-            ? `<video src="${escapeHtml(media.url)}" muted playsinline preload="metadata"></video>`
-            : `<img src="${escapeHtml(optimizedImageUrl(media.url, 520, 70))}" alt="${escapeHtml(account.title)}" loading="${isEager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${isEager ? 'high' : 'auto'}" />`
-          : renderGeneratedCover(account)
-      }
+      ${innerHTML}
+      <div class="cover-overlay"></div>
       ${badge ? `<span class="corner-badge ${badgeClass}">${badge}</span>` : ''}
     </div>
   `;
@@ -1474,18 +1489,22 @@ function renderBottomNav() {
   return `
     <nav class="bottom-nav" aria-label="Asosiy">
       <button class="${state.tab === 'home' ? 'active' : ''}" type="button" data-action="tab-store">
+        ${state.tab === 'home' ? '<div class="nav-indicator"></div>' : ''}
         <span aria-hidden="true">${biIcon('grid')}</span>
         <strong>Bosh</strong>
       </button>
       <button class="nav-add ${state.tab === 'sell' ? 'active' : ''} ${state.config.sellingEnabled ? '' : 'is-disabled'}" type="button" data-action="tab-sell" aria-label="Qo'shish" aria-disabled="${state.config.sellingEnabled ? 'false' : 'true'}">
+        ${state.tab === 'sell' ? '<div class="nav-indicator"></div>' : ''}
         <span aria-hidden="true">${biIcon('plus-lg')}</span>
         <strong>Sotish</strong>
       </button>
       <button class="${state.tab === 'history' ? 'active' : ''}" type="button" data-action="tab-history">
+        ${state.tab === 'history' ? '<div class="nav-indicator"></div>' : ''}
         <span aria-hidden="true">${biIcon('clock')}</span>
         <strong>Tarix</strong>
       </button>
       <button class="${state.tab === 'profile' ? 'active' : ''}" type="button" data-action="tab-profile">
+        ${state.tab === 'profile' ? '<div class="nav-indicator"></div>' : ''}
         <span aria-hidden="true">${biIcon('person')}</span>
         <strong>Profil</strong>
       </button>
