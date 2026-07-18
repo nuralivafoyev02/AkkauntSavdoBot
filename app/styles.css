@@ -579,7 +579,7 @@ button {
 
 .account-card.is-sold .account-cover img,
 .account-card.is-sold .account-cover video {
-  /* filter: saturate(0.72); */
+  filter: saturate(0.72);
   width: 100% !important;
   height: auto !important;
   object-fit: contain;
