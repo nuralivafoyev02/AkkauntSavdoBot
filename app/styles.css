@@ -510,7 +510,7 @@ button {
   position: relative;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
 }
 
@@ -578,8 +578,8 @@ button {
 
 .account-card.is-sold .account-cover img,
 .account-card.is-sold .account-cover video {
-  filter: saturate(0.72);
-  opacity: 0.76;
+  /* filter: saturate(0.72); */
+  opacity: 0.90;
 }
 
 .account-card.is-sold strong {
