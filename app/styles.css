@@ -510,7 +510,7 @@ button {
   position: relative;
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   object-position: center !important; 
 }
