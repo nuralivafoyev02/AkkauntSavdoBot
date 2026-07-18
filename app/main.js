@@ -177,6 +177,7 @@ function optimizedImageUrl(url, width = 640, quality = 72) {
     parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
     parsed.searchParams.set('width', String(width));
     parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'contain');
     parsed.searchParams.set('format', 'webp');
     return parsed.toString();
   } catch {
